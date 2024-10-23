@@ -201,7 +201,7 @@ sub cancel {
     $params->{request}->status("CANCREQ")->store;
 
     # Find the submission's Rapid ID
-    my $rapid_request_id = $params->{request}->illrequestattributes->find({
+    my $rapid_request_id = $params->{request}->extended_attributes->find({
         illrequest_id => $params->{request}->illrequest_id,
         type          => "RapidRequestId"
     });
@@ -278,7 +278,7 @@ sub edititem {
     my $other = $params->{other};
     my $stage = $other->{stage};
     if ( !$stage || $stage eq 'init' ) {
-        my $attrs = $params->{request}->illrequestattributes->unblessed;
+        my $attrs = $params->{request}->extended_attributes->unblessed;
         foreach my $attr(@{$attrs}) {
             $other->{$attr->{type}} = $attr->{value};
         }
@@ -439,7 +439,7 @@ sub migrate {
 
         # Map from Koha's core fields to our metadata fields
         my $original_id = $original_request->illrequest_id;
-        my @original_attributes = $original_request->illrequestattributes->search(
+        my @original_attributes = $original_request->extended_attributes->search(
             { illrequest_id => $original_id }
         )->as_list;
         my @attributes = keys %{$fields};
@@ -488,7 +488,7 @@ sub migrate {
         # update our local submission
         # Get the request we've migrated from
         my $new_request = $params->{request};
-        my $from_id = $new_request->illrequestattributes->find(
+        my $from_id = $new_request->extended_attributes->find(
             { type => 'migrated_from' } )->value;
         my $request = Koha::ILL::Requests->find($from_id);
 
@@ -636,7 +636,7 @@ sub create_illrequestattributes {
 
     # Get any existing illrequestattributes for this request,
     # so we can avoid trying to create duplicates
-    my $existing_attrs = $request->illrequestattributes->unblessed;
+    my $existing_attrs = $request->extended_attributes->unblessed;
     my $existing_hash = {};
     foreach my $a(@{$existing_attrs}) {
         $existing_hash->{lc $a->{type}} = $a->{value};
@@ -760,7 +760,7 @@ sub create_request {
     };
 
     $metadata = $self->prep_submission_metadata(
-        $submission->illrequestattributes,
+        $submission->extended_attributes,
         $metadata
     );
 
@@ -907,7 +907,7 @@ illrequestattributes store
 sub metadata {
     my ( $self, $request ) = @_;
 
-    my $attrs = $request->illrequestattributes;
+    my $attrs = $request->extended_attributes;
     my $fields = $self->fieldmap;
 
     my $type = $attrs->find({ type => "RapidRequestType" })->value;
