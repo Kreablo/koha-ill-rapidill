@@ -766,53 +766,62 @@ sub create_request {
 
     # Make the request with RapidILL via the koha-plugin-rapidill API
     my $response = $self->{_api}->InsertRequest( $metadata, $submission->borrowernumber );
+    my $error = 0;
 
     # If the call to RapidILL was successful,
     # add the Rapid request ID to our submission's metadata
-    my $body = from_json($response->decoded_content);
-    if ($response->is_success && $body->{result}->{IsSuccessful}) {
-        my $rapid_id = $body->{result}->{RapidRequestId};
-        if ($rapid_id && length $rapid_id > 0) {
-            Koha::ILL::Request::Attribute->new({
-                illrequest_id => $submission->illrequest_id,
-                # Check required for compatibility with installations before bug 33970
-                column_exists( 'illrequestattributes', 'backend' ) ? (backend =>"RapidILL") : (),
-                type          => 'RapidRequestId',
-                value         => $rapid_id
-            })->store;
+    if ($response->is_success) {
+        my $body = from_json($response->decoded_content);
+        if ($body->{result}->{IsSuccessful}) {
+            my $rapid_id = $body->{result}->{RapidRequestId};
+            if ($rapid_id && length $rapid_id > 0) {
+                Koha::ILL::Request::Attribute->new({
+                    illrequest_id => $submission->illrequest_id,
+                    # Check required for compatibility with installations before bug 33970
+                    column_exists( 'illrequestattributes', 'backend' ) ? (backend =>"RapidILL") : (),
+                    type          => 'RapidRequestId',
+                    value         => $rapid_id
+                                                   })->store;
+            }
+            # Add the RapidILL ID to the orderid field
+            $submission->orderid($rapid_id);
+            # Update the submission status
+            $submission->status('REQ')->store;
+
+            # Log the outcome
+            $self->log_request_outcome({
+                outcome => 'RAPIDILL_REQUEST_SUCCEEDED',
+                request => $submission
+                                       });
+
+            return { success => 1 };
+        } else {
+            $error = $body->{result}->{VerificationNote};
         }
-        # Add the RapidILL ID to the orderid field
-        $submission->orderid($rapid_id);
-        # Update the submission status
-        $submission->status('REQ')->store;
-
-        # Log the outcome
-        $self->log_request_outcome({
-            outcome => 'RAPIDILL_REQUEST_SUCCEEDED',
-            request => $submission
-        });
-
-        return { success => 1 };
     }
+
+    if (!$error) {
+        $error = $response->message;
+    }
+
     # The call to RapidILL failed for some reason. Add the message we got back from the API
     # to the submission's Staff Notes
     $submission->notesstaff(
-        join("\n\n", ($submission->notesstaff || "", "RapidILL request failed:\n" . $body->{result}->{VerificationNote} || ""))
+        join("\n\n", ($submission->notesstaff || "", "RapidILL request failed:\n" . $error))
     )->store;
 
     # Log the outcome
     $self->log_request_outcome({
         outcome => 'RAPIDILL_REQUEST_FAILED',
         request => $submission,
-        message => $body->{result}->{VerificationNote}
+        message => $error
     });
 
     # Return the message
     return {
         success => 0,
-        message => $body->{result}->{VerificationNote}
+        message => $error
     };
-
 }
 
 =head3 confirm
