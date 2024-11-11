@@ -25,9 +25,17 @@ use HTTP::Request;
 use JSON qw( encode_json );
 use CGI;
 use URI;
+use File::Basename qw( dirname );
+use YAML::Syck qw( LoadFile );
 
 use Koha::Logger;
 use C4::Context;
+use Koha::Config;
+
+use constant {
+    CONFIG_FNAME => "rapidill-config.yaml",
+    RAPIDILL_SERVICE_URL => "https://rapid.exlibrisgroup.com/rapid5api/apiservice.asmx?WSDL"
+};
 
 =head1 NAME
 
@@ -38,27 +46,7 @@ RapidILL - Client interface to RapidILL API plugin (koha-plugin-rapidill)
 sub new {
     my ($class) = @_;
 
-    my $cgi = new CGI;
-
-    my $interface = C4::Context->interface;
-    my $url = $interface eq "intranet" ?
-        C4::Context->preference('staffClientBaseURL') :
-        C4::Context->preference('OPACBaseURL');
-
-    # We need a URL to continue, otherwise we can't make the API call to
-    # the RapidILL API plugin
-    if (!$url) {
-        Koha::Logger->get->warn("Syspref staffClientBaseURL or OPACBaseURL not set!");
-        die;
-    }
-
-    my $uri = URI->new($url);
-
     my $self = {
-        ua      => LWP::UserAgent->new,
-        cgi     => new CGI,
-        logger  => Koha::Logger->get({ category => 'Koha.Illbackends.RapidILL.Lib.API' }),
-        baseurl => $uri->scheme . "://" . $uri->host . ":" . $uri->port . "/api/v1/contrib/rapidill"
     };
 
     bless $self, $class;
@@ -67,7 +55,7 @@ sub new {
 
 =head3 InsertRequest
 
-Make a call to the /insertrequest endpoint to create a new request
+Make a call to the RapidILL service api
 
 =cut
 
@@ -78,31 +66,27 @@ sub InsertRequest {
 
     my @name = grep { defined } ($borrower->firstname, $borrower->surname);
 
-    # Request including passed metadata and credentials
-    my $body = {
-        borrowerId => $borrowernumber,
-        metadata => {
-            PatronId             => $borrower->borrowernumber,
-            PatronName           => join (" ", @name),
-            IsHoldingsCheckOnly  => 0,
-            DoBlockLocalOnly     => 0,
-            %{$metadata}
-        }
+    $metadata = {
+        PatronId             => $borrower->borrowernumber,
+        PatronName           => join (" ", @name),
+        IsHoldingsCheckOnly  => 0,
+        DoBlockLocalOnly     => 0,
+        %{$metadata}
     };
 
-    $body->{metadata}->{PatronEmail} = $borrower->email if $borrower->email;
+    $metadata->{PatronEmail} = $borrower->email if $borrower->email;
 
-    my $request = HTTP::Request->new( 'POST', $self->{baseurl} . "/insertrequest" );
+    my $input = {
+        ClientAppName        => "Koha RapidILL client",
+        %{$metadata}
+    };
 
-    $request->header( "Content-type" => "application/json" );
-    $request->content( encode_json($body) );
-
-    return $self->{ua}->request( $request );
+    return _instance()->call('InsertRequest', $input);
 }
 
 =head3 UpdateRequest
 
-Make a call to the updaterequest API endpoint
+Make a call to the RapidILL service api
 
 =cut
 
@@ -111,18 +95,65 @@ sub UpdateRequest {
 
     $metadata //= {};
 
-    my $body = encode_json({
-        requestId    => $request_id,
-        updateAction => $action,
-        metadata     => $metadata
-    });
+    my $input =  {
+        RapidRequestId       => $request_id,
+        UpdateAction         => $action,
+        %{$metadata}
+    };
 
-    my $request = HTTP::Request->new( 'POST', $self->{baseurl} . "/updaterequest" );
+    return _instance()->call( 'UpdateRequest', $input );
 
-    $request->header( "Content-type" => "application/json" );
-    $request->content( $body );
-
-    return $self->{ua}->request( $request );
 }
+
+sub _config {
+    my $conf_dir = dirname(Koha::Config->guess_koha_conf);
+
+    my $config = LoadFile( $conf_dir . "/" . CONFIG_FNAME );
+
+    return $config;
+}
+
+sub _get_credentials {
+    my $config = _config();
+
+
+    if ($config && $config->{credentials}) {
+        my $cred = $config->{credentials};
+
+        return {
+            UserName             => $cred->{username},
+            Password             => $cred->{password},
+            RequestingRapidCode  => $cred->{requesting_rapid_code},
+            RequestingBranchName => $cred->{requesting_branch_name}
+        };
+    }
+
+    die "No credentials configured!";
+}
+
+sub _class {
+    my $name = shift;
+
+    my $package = 'Koha::Illbackends::RapidILL::Lib::';
+
+    if ($name eq 'XML::Compile') {
+        return $package . 'API_XML_Compile';
+    }
+
+    if ($name eq 'SOAP::Lite') {
+        return $package . 'Api_SOAP_Lite';
+    }
+
+    die "Unsupported class: '$name'";
+}
+
+sub _instance {
+    my $config = _config();
+
+    my $class = _class($config->{api_class} ?  $config->{api_class} : 'SOAP::Lite');
+
+    return $class->new(RAPIDILL_SERVICE_URL, _get_credentials());
+}
+
 
 1;
