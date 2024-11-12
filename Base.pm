@@ -28,6 +28,7 @@ use C4::Installer;
 use Koha::Illbackends::RapidILL::Lib::API;
 use Koha::Libraries;
 use Koha::Patrons;
+use C4::Languages;
 
 our $VERSION = "1.0.0";
 
@@ -68,6 +69,9 @@ sub create {
     my $other = $params->{other};
     my $stage = $other->{stage};
 
+    my $lang = C4::Languages::getlanguage();
+    my @lang_split = split /_|-/, $lang;
+
     my $response = {
         cwd            => dirname(__FILE__),
         backend        => $self->name,
@@ -79,7 +83,9 @@ sub create {
         message        => "",
         error          => 0,
         field_map      => $self->fieldmap_sorted,
-        field_map_json => to_json($self->fieldmap())
+        field_map_json => to_json($self->fieldmap()),
+        lang_dialect   => $lang,
+        lang_all       => $lang_split[0]
     };
 
     # Check for borrowernumber, but only if we're not receiving an OpenURL
@@ -300,10 +306,15 @@ Edit an item's metadata
 sub edititem {
     my ($self, $params) = @_;
 
+    my $lang = C4::Languages::getlanguage();
+    my @lang_split = split /_|-/, $lang;
+
     # Don't allow editing of requested submissions
     return {
         cwd    => dirname(__FILE__),
-        method => 'illlist'
+        method => 'illlist',
+        lang_dialect   => $lang,
+        lang_all       => $lang_split[0]
     } if $params->{request}->status ne 'NEW';
 
     my $other = $params->{other};
@@ -322,7 +333,9 @@ sub edititem {
             stage   => 'form',
             value   => $params,
             field_map => $self->fieldmap_sorted,
-            field_map_json => to_json($self->fieldmap)
+            field_map_json => to_json($self->fieldmap),
+            lang_dialect   => $lang,
+            lang_all       => $lang_split[0]
         };
     } elsif ( $stage eq 'form' ) {
         # Update submission
@@ -344,7 +357,9 @@ sub edititem {
                 stage   => 'form',
                 value   => $params,
                 field_map => $self->fieldmap_sorted,
-                field_map_json => to_json($self->fieldmap)
+                field_map_json => to_json($self->fieldmap),
+                lang_dialect   => $lang,
+                lang_all       => $lang_split[0]
             };
         }
 
@@ -416,7 +431,9 @@ sub edititem {
             next           => 'illview',
             value          => $params,
             field_map      => $self->fieldmap_sorted,
-            field_map_json => to_json($self->fieldmap)
+            field_map_json => to_json($self->fieldmap),
+            lang_dialect   => $lang,
+            lang_all       => $lang_split[0]
         };
     }
 }
@@ -1264,6 +1281,7 @@ sub fieldmap {
             exclude   => 1,
             type      => "string",
             label     => "Material type",
+            label_msg => "material_type",
             ill       => "type",
             position  => 99,
             value_map => {
@@ -1276,6 +1294,7 @@ sub fieldmap {
         SuggestedIssns => {
             type      => "array",
             label     => "ISSN",
+            label_msg => "issn",
             ill       => "issn",
             position  => 11,
             help      => "Multiple ISSNs must be separated by a space",
@@ -1289,6 +1308,7 @@ sub fieldmap {
         OclcNumber => {
             type      => "string",
             label     => "OCLC Accession number",
+            label_msg => "oclc_accession_number",
             position  => 13,
             materials => [ "Article", "Book", "BookChapter" ],
             required  => {
@@ -1303,6 +1323,7 @@ sub fieldmap {
         SuggestedIsbns => {
             type      => "array",
             label     => "ISBN",
+            label_msg => "isbn",
             ill       => "isbn",
             position  => 10,
             help      => "Multiple ISBNs must be separated by a space",
@@ -1316,6 +1337,7 @@ sub fieldmap {
         SuggestedLccns => {
             type      => "array",
             label     => "LCCN",
+            label_msg => "lccn",
             position  => 12,
             help      => "Multiple LCCNs must be separated by a space",
             materials => [ "Book", "BookChapter" ]
@@ -1325,6 +1347,10 @@ sub fieldmap {
             label_variants  => {
                 Article     => "Article title",
                 BookChapter => "Book chapter title / number"
+            },
+            label_msg_variants => {
+                Article => "article_title",
+                BookChapter => "book_chapter_title"
             },
             ill       => "article_title",
             position  => 1,
@@ -1345,6 +1371,11 @@ sub fieldmap {
                 Book        => "Book author",
                 BookChapter => "Book author"
             },
+            label_msg_variants => {
+                Article     => "article_author",
+                Book        => "book_author",
+                BookChapter => "book_chapter_author"
+            },
             ill       => "article_author",
             position  => 2,
             materials => [ "Article", "Book", "BookChapter" ]
@@ -1354,6 +1385,10 @@ sub fieldmap {
             label_variants => {
                 Article     => "Pages in journal",
                 BookChapter => "Pages in book extract"
+            },
+            label_msg_variants => {
+                Article     => "pages_in_journal",
+                BookChapter => "pages_in_book_extract"
             },
             ill       => "pages",
             position  => 9,
@@ -1374,6 +1409,11 @@ sub fieldmap {
                 Book        => "Book title",
                 BookChapter => "Book chapter title / number"
             },
+            label_msg_variants => {
+                Article     => "journal_title",
+                Book        => "book_title",
+                BookChapter => "book_chapter_title"
+            },
             ill       => "title",
             position  => 0,
             materials => [ "Article", "Book", "BookChapter" ]
@@ -1381,6 +1421,7 @@ sub fieldmap {
         PatronJournalYear => {
             type      => "string",
             label     => "Four digit year of publication",
+            label_msg => "year_of_publication",
             ill       => "year",
             position  => 8,
             materials => [ "Article", "Book", "BookChapter" ],
@@ -1393,6 +1434,7 @@ sub fieldmap {
         JournalVol => {
             type      => "string",
             label     => "Volume number",
+            label_msg => "volume_number",
             ill       => "volume",
             position  => 4,
             materials => [ "Article", "Book", "BookChapter" ],
@@ -1405,6 +1447,7 @@ sub fieldmap {
         JournalIssue => {
             type      => "string",
             label     => "Journal issue number",
+            label_msg => "journal_issue_number",
             ill       => "issue",
             position  => 5,
             materials => [ "Article" ]
@@ -1414,11 +1457,13 @@ sub fieldmap {
             ill       => "item_date",
             position  => 7,
             label     => "Journal month",
+            label_msg => "journal_month",
             materials => [ "Article" ]
         },
         Edition => {
             type      => "string",
             label     => "Book edition",
+            label_msg => "book_edition",
             ill       => "part_edition",
             position  => 3,
             materials => [ "Book", "BookChapter" ]
@@ -1426,6 +1471,7 @@ sub fieldmap {
         Publisher => {
             type      => "string",
             label     => "Book publisher",
+            label_msg => "book_publisher",
             ill       => "publisher",
             position  => 6,
             materials => [ "Book", "BookChapter" ]
@@ -1435,6 +1481,7 @@ sub fieldmap {
             type      => "string",
             ill       => "associated_id",
             label     => "RapidILL identifier",
+            label_msg => "rapidill_identifier",
             position  => 99,
             materials => [ "Article", "Book", "BookChapter" ]
         }

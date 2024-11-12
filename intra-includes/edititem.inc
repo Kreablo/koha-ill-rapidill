@@ -1,8 +1,19 @@
 [% cwd = whole.cwd %]
+[% TRY %]
+    [% lang_file = "${cwd}/l10n/${whole.lang_dialect}"_".inc" %]
+    [% PROCESS "$lang_file" %]
+[% CATCH %]
+    [% TRY %]
+        [% lang_file = "${cwd}/l10n/${whole.lang_all}"_".inc" %]
+        [% PROCESS "$lang_file" %]
+    [% CATCH %]
+        [% PROCESS "${cwd}/l10n/default.inc" %]
+    [% END %]
+[% END %]
 [% SET illrequest_id = request.illrequest_id %]
 [% SET requests_back_url = "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=$illrequest_id" %]
 
-<h2>Edit request</h2>
+<h2>[% MSG.edit_request %]</h2>
 [% PROCESS "${cwd}/shared-includes/form.inc" %]
 [% SET staff = 1 %]
 [% PROCESS render_edit_form rapid_request_type=whole.value.other.RapidRequestType %]

@@ -4,6 +4,17 @@
 [% PROCESS "${cwd}/shared-includes/form.inc" %]
 [% SET staff = 0 %]
 [% SET requests_back_url = '/cgi-bin/koha/opac-illrequests.pl' %]
+[% TRY %]
+    [% lang_file = "${whole.cwd}/l10n/${whole.lang_dialect}"_".inc" %]
+    [% PROCESS "$lang_file" %]
+[% CATCH %]
+    [% TRY %]
+        [% lang_file = "${whole.cwd}/l10n/${whole.lang_all}"_".inc" %]
+        [% PROCESS "$lang_file" %]
+    [% CATCH %]
+        [% PROCESS "${whole.cwd}/l10n/default.inc" %]
+    [% END %]
+[% END %]
 
 [% IF whole.error %]
   [% IF whole.status == 'missing_fields' %]
@@ -30,9 +41,9 @@
 
 [% ELSIF whole.stage == "init" %]
 <ul class="nav nav-tabs" role="tablist" />
-   <li role="presentation" class="active nav-item"><a class="nav-link active" href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">Book</a></li>
-   <li role="presentation" class="nav-item"><a class="nav-link" href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">Article</a></li>
-   <li role="presentation" class="nav-item"><a class="nav-link" href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">Chapter</a></li>
+   <li role="presentation" class="active nav-item"><a class="nav-link active" href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">[% MSG.option_book %]</a></li>
+   <li role="presentation" class="nav-item"><a class="nav-link" href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">[% MSG.option_article %]</a></li>
+   <li role="presentation" class="nav-item"><a class="nav-link" href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">[% MSG.option_book_chapter %]</a></li>
 </ul>
 <div class="tab-content">
   <div role="tabpanel" class="tab-pane active" id="type-book">

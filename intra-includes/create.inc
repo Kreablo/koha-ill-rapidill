@@ -2,40 +2,33 @@
 [% USE Asset %]
 [% USE raw %]
 [% SET koha_version = Koha.Version %]
+[% TRY %]
+    [% lang_file = "${whole.cwd}/l10n/${whole.lang_dialect}"_".inc" %]
+    [% PROCESS "$lang_file" %]
+[% CATCH %]
+    [% TRY %]
+        [% lang_file = "${whole.cwd}/l10n/${whole.lang_all}"_".inc" %]
+        [% PROCESS "$lang_file" %]
+    [% CATCH %]
+        [% PROCESS "${whole.cwd}/l10n/default.inc" %]
+    [% END %]
+[% END %]
 
 [% SET cwd = whole.cwd %]
 [% PROCESS "${cwd}/shared-includes/form.inc" %]
 [% SET staff = 1 %]
 [% SET requests_back_url = '/cgi-bin/koha/ill/ill-requests.pl' %]
 
-[% IF whole.error %]
-  [% IF whole.status == 'missing_fields' %]
-    <p><em>Please Note:</em> Some mandatory fields are missing.</p>
-  [% ELSIF whole.status == 'missing_branch' %]
-    <p><em>Please Note:</em> Branch is a mandatory field.</p>
-  [% ELSIF whole.status == 'invalid_borrower' %]
-    <p><em>Please Note:</em> The borrower details you entered are invalid.</p>
-  [% ELSIF whole.status == 'invalid_branch' %]
-    <p><em>Please Note:</em> The branch you chose is invalid.</p>
-  [% ELSIF whole.status == 'api' %]
-    <p><em>Please Note:</em> there was an error whilst communicating with the remote service.</p>
-  [% ELSIF whole.status == 'missing_query' %]
-    <p><em>Please Note:</em> You did not enter a search query.</p>
-  [% ELSIF whole.message %]
-    <p><em>[% whole.message %]</em></p>
-  [% ELSE %]
-    <p><em>Unhandled error</em></p>
-  [% END %]
-[% END %]
+[% PROCESS render_errors %]
 
 [% IF whole.stage == "commit" %]
-<p>We have now created your request.</p>
+<p>[% MSG.created_request_confirm | html %]</p>
 
 [% ELSIF whole.stage == "init" %]
 <ul class="nav nav-tabs" role="tablist" />
-   <li role="presentation" class="active"><a href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">Book</a></li>
-   <li role="presentation"><a href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">Article</a></li>
-   <li role="presentation"><a href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">Chapter</a></li>
+   <li role="presentation" class="active"><a href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">[% MSG.option_book | html %]</a></li>
+   <li role="presentation"><a href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">[% MSG.option_article | html %]</a></li>
+   <li role="presentation"><a href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">[% MSG.option_book_chapter | html %]</a></li>
 </ul>
 <div class="tab-content">
   <div role="tabpanel" class="tab-pane active" id="type-book">

@@ -48,7 +48,7 @@ function validateFields(form, type) {
                     fieldmap[field].label;
             });
             messages.push(
-                _("You must complete at least one of the following fields: ") + fieldNames.join(', ')
+                "[% MSG.you_must_complete_fields %] " + fieldNames.join(', ')
             );
         }
     }
