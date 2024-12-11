@@ -31,6 +31,11 @@ use Koha::Patrons;
 
 our $VERSION = "1.0.0";
 
+use constant {
+    LOCALLY_AVAILABLE => 'locally-available',
+    GIVEN_BY_RAPIDILL => 'given-by-rapidill'
+};
+
 sub new {
     my ($class, $params) = @_;
 
@@ -158,16 +163,42 @@ sub create {
             $response->{value}  = $params;
             return $response;
         }
-        elsif ( !$other->{opac} && !$self->_validate_metadata($other) ) {
-            # We don't have sufficient metadata for request creation,
-            # create a local submission for later attention
-            $self->create_submission($params);
+        elsif ( !$self->_validate_metadata($other) ) {
 
-            $response->{stage} = "commit";
-            $response->{next} = "illview";
-            return $response;
+            if ($other->{opac}) {
+                $response->{field_map} = $self->fieldmap_sorted;
+                $response->{field_map_json} = to_json($self->fieldmap());
+                $response->{status} = "invalid_metadata";
+                $response->{error}  = 1;
+                $response->{stage}  = 'init';
+                $response->{value}  = $params;
+                return $response;
+            } else {
+
+                # We don't have sufficient metadata for request creation,
+                # create a local submission for later attention
+                $self->create_submission($params);
+
+                $response->{stage} = "commit";
+                $response->{next} = "illview";
+                return $response;
+            }
         }
         else {
+            my $requestability = $self->_check_requestability($params);
+            if (!$requestability->{requestable}) {
+                $response->{field_map} = $self->fieldmap_sorted;
+                $response->{field_map_json} = to_json($self->fieldmap());
+                $response->{status} = "not_requestable";
+                $response->{error}  = 1;
+                $response->{stage}  = 'init';
+                $response->{value}  = $params;
+                $response->{_rapidill_reason} = $requestability->{reason};
+                $response->{_rapidill_note} = $requestability->{note} if exists $requestability->{note};
+                $response->{_rapidill_holdings} = $requestability->{holdings} if exists $requestability->{holdings};
+                return $response;
+            }
+
             # We can submit a request directly to RapidILL
             my $result = $self->submit_and_request($params);
 
@@ -528,7 +559,7 @@ this material type
 sub _validate_metadata {
     my ($self, $metadata) = @_;
     my $fields = $self->fieldmap();
-    
+
     my $type = $metadata->{RapidRequestType};
     my $groups = $self->_build_validation_groups($type);
 
@@ -713,8 +744,9 @@ sub prep_submission_metadata {
         ) {
             # "array" fields need splitting by space and forming into an array
             if ($fields->{$field}->{type} eq 'array') {
-                $metadata_hashref->{$field}=~s/  / /g;
-                my @arr = split(/ /, $metadata_hashref->{$field});
+                $metadata_hashref->{$field}=~s/^ *//;
+                $metadata_hashref->{$field}=~s/ *$//;
+                my @arr = split(/ +/, $metadata_hashref->{$field});
                 # Needs to be in the form
                 # SuggestedIsbns => { string => [ "1234567890", "0987654321" ] }
                 $return->{$field} = { string => \@arr };
@@ -937,6 +969,43 @@ sub metadata {
 
     return $metadata;
 }
+
+sub metadata0 {
+    my ( $self, $params ) = @_;
+
+    my $fields = $self->fieldmap;
+
+    my $type = $params->{RapidRequestType};
+
+    my $metadata = {};
+
+    my %p = %$params;
+
+    while (my ($k, $v) = each %p) {
+        if ($fields->{$k}) {
+            my $label = ref $fields->{$k}->{label} eq "HASH" ?
+                $fields->{$k}->{label}->{$type} :
+                $fields->{$k}->{label};
+            $metadata->{$label} = $v;
+        }
+    }
+
+    # OPAC list view uses completely different property names for author
+    # and title. Cater for that.
+    if ($type eq "Article" || $type eq "BookChapter") {
+        my $title_key = $fields->{ArticleTitle}->{label}->{$type};
+        my $author_key = $fields->{ArticleAuthor}->{label}->{$type};
+        $metadata->{Title} = $metadata->{$title_key} if $metadata->{$title_key};
+        $metadata->{Author} = $metadata->{$author_key} if $metadata->{$author_key};
+    } elsif ($type eq "Book") {
+        $metadata->{Title} = $metadata->{'Book title'} if $metadata->{'Book title'};
+        $metadata->{Author} = $metadata->{'Book author'} if $metadata->{'Book author'};
+    }
+
+    return $metadata;
+}
+
+
 
 =head3 capabilities
 
@@ -1371,6 +1440,56 @@ sub fieldmap {
         }
     };
 }
+
+=head3 _check_requestability
+
+=cut
+
+sub _check_requestability {
+    my $self = shift;
+    my $params = shift;
+
+    my $metadata0 = $self->metadata0($params);
+
+    my $metadata = { %$metadata0 };
+    # First, is this item available locally
+    $metadata->{IsHoldingsCheckOnly} = 1;
+    $metadata->{DoBlockLocalOnly} = 0;
+
+    my $response = $self->{_api}->InsertRequest( $metadata );
+
+    if (exists $response->{parameters}
+        && exists $response->{parameters}->{holdings}
+        && exists $response->{parameters}->{holdings}->{LocalHoldingItem}
+        && @{$response->{parameters}->{holdings}->{LocalHoldingItem}} > 0) {
+
+        return {
+            requestable => 0,
+            reason => LOCALLY_AVAILABLE,
+            holdings => $response->{parameters}->{holdings}
+        };
+    }
+
+    $metadata->{PatronNotes} = 'HOLDING_CHECK_DO_REMOTE_SEARCH';
+    $response = $self->{_api}->InsertRequest( $metadata );
+
+    my $canRequest = $response->{parameters}->{canRequest};
+    my $requestable = $canRequest->{FoundMatch} &&
+        $canRequest->{NumberOfAvailableHoldings} > 0;
+
+    if ( $requestable ) {
+        return { requestable => 1 };
+    }
+
+    my $note = join ', ', (split '\n\r?+', $canRequest->{VerificationNote});
+
+    return {
+        requestable => 0,
+        reason => GIVEN_BY_RAPIDILL,
+        note => $note
+    };
+};
+
 
 =head3 _validate_borrower
 
