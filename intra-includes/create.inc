@@ -3,7 +3,10 @@
 [% USE raw %]
 [% SET koha_version = Koha.Version %]
 
-[% cwd = whole.cwd %]
+[% SET cwd = whole.cwd %]
+[% PROCESS "${cwd}/shared-includes/form.inc" %]
+[% SET staff = 1 %]
+[% SET requests_back_url = '/cgi-bin/koha/ill/ill-requests.pl' %]
 
 [% IF whole.error %]
   [% IF whole.status == 'missing_fields' %]
@@ -29,87 +32,32 @@
 <p>We have now created your request.</p>
 
 [% ELSIF whole.stage == "init" %]
-<div role="alert" class="alert alert-warning" id="request-lookup" style="display: none">
-  Checking item availability via RapidILL
-  <img src="[% interface | html %]/[% theme | html %]/img/spinner-small.gif" alt="" />
+<ul class="nav nav-tabs" role="tablist" />
+   <li role="presentation" class="active"><a href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">Book</a></li>
+   <li role="presentation"><a href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">Article</a></li>
+   <li role="presentation"><a href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">Chapter</a></li>
+</ul>
+<div class="tab-content">
+  <div role="tabpanel" class="tab-pane active" id="type-book">
+    [% PROCESS render_create_form rapid_request_type="Book" %]
+  </div>
+  <div role="tabpanel" class="tab-pane" id="type-article">
+    [% PROCESS render_create_form rapid_request_type="Article" %]
+  </div>
+  <div role="tabpanel" class="tab-pane" id="type-chapter">
+    [% PROCESS render_create_form rapid_request_type="BookChapter" %]
+  </div>
 </div>
-<div role="alert" class="alert alert-success" id="request-possible" style="display: none">Item is available for request</div>
-<div role="alert" class="alert alert-warning" id="request-notpossible" style="display: none">
-  Item cannot be requested
-  <div id="localholdings" style="display:none"></div>
-  <div id="errormessage" style="display:none"></div>
-</div>
-<form method="POST" action="[% here %]" id="create_form">
-  <fieldset class="rows">
-    <legend>Enter metadata</legend>
-    <input name="stage" id="stage" value="validate" type="hidden"/>
-    <input name="method" id="method" value="create" type="hidden"/>
-    <input name="backend" id="backend" value="[% whole.value.other.backend %]" type="hidden"/>
-    [% IF Koha.Version.major >= 24 %][% INCLUDE 'csrf-token.inc' %][% END %]
-    <ol>
-      <li>
-        <label for="RapidRequestType">Type:</label>
-        <select name="RapidRequestType" id="type">
-          [% options = { Book => 'Book', Article => 'Article', BookChapter => 'Book chapter' } %]
-          [% FOREACH opt IN options.keys.sort %]
-          [% IF ( whole.value.other.RapidRequestType == opt ) %]
-          <option value="[% opt %]" selected="selected">[% options.$opt %]</option>
-          [% ELSE %]
-          <option value="[% opt %]">[% options.$opt %]</option>
-          [% END %]
-          [% END %]
-        </select>
-      </li>
-      [% FOREACH field IN whole.field_map %]
-      [% key = field.key %]
-      [% IF !field.exclude %]
-      <li id="rapid_field_[% key %]">
-        <label id="[% key %]_label" for="[% key %]"></label>
-        <input type="text" name="[% key %]" id="[% key %]" value="[% whole.value.other.$key %]" />
-        [% IF field.help %]
-        ([% field.help %])
-        [% END %]
-      </li>
-      [% END %]
-      [% END %]
-    </ol>
-  </fieldset>
-  <fieldset class="rows">
-    <legend>Patron options</legend>
-    <ol>
-      <li>
-        <label class="required" for="cardnumber">Card number, username or surname:</label>
-        <input type="text" autocomplete="off" name="cardnumber" id="cardnumber" type="text"
-           value="[% whole.value.other.cardnumber %]" />
-      </li>
-      <li>
-        <label class="required" for="branchcode">Destination library:</label>
-        <select id="branchcode" name="branchcode">
-          [% FOREACH branch IN branches %]
-          [% IF ( whole.value.other.branchcode == branch.branchcode ) %]
-          <option value="[% branch.branchcode %]" selected="selected">[% branch.branchname %]</option>
-          [% ELSE %]
-          <option value="[% branch.branchcode %]">[% branch.branchname %]</option>
-          [% END %]
-          [% END %]
-        </select>
-      </li>
-    </ol>
-  </fieldset>
-  <fieldset class="action">
-    <p id="rapid_warning" role="alert" class="alert alert-danger" style="visibility:hidden;"></p>
-    <input id="rapid_submit" disabled type="submit" value="Make request"/>
-    <a class="cancel" href="/cgi-bin/koha/ill/ill-requests.pl">Cancel</a>
-  </fieldset>
-</form>
-
 [% END %]
 <style>
+  ul.fields li {
+    list-style-type: none;
+  }
   #rapid_warnings {
     margin-bottom: 0;
   }
   .rapid_hint {
-   margin-left: 1em; 
+   margin-left: 1em;
   }
   .alert {
     margin-top: 20px;
@@ -129,53 +77,84 @@
 <script>
   // Require a username and branch selection
   document.addEventListener('DOMContentLoaded', function(){
-      // Fields that are not in groups, but cannot be empty
-      var notEmpty = [ 'cardnumber' ];
 
       var listenerSelectors = '';
 
       var fieldmap = [% whole.field_map_json %];
-      addLabels();
-      showFields();
-      validateFields();
-      addHandlers();
-      $('#type').change(function() {
-          addLabels();
-          showFields();
-          validateFields();
-          addHandlers();
-      });
 
       [% INCLUDE "${cwd}/shared-includes/create.js" %]
 
-      /* Maintain patron autocomplete compatibility across versions */
-      [% IF koha_version.major <= 22 && koha_version.minor < 11 %]
-      $('#create_form #cardnumber').autocomplete({
-          source: "/cgi-bin/koha/circ/ysearch.pl",
-          minLength: 3,
-          select: function( event, ui ) {
-              var field = ui.item.cardnumber;
-              $('#create_form #cardnumber').val(field)
-              return false;
+
+      let hasValidate = false;
+
+      const doSubmit = (event, form, formId, type) => {
+          const messages = validateFields(form, type);
+          const container = document.getElementById(type + '_messages');
+          for (const c of container.children) {
+              c.remove();
           }
-      })
-      .data( "ui-autocomplete" )._renderItem = function( ul, item ) {
-          return $( "<li></li>" )
-          .data( "ui-autocomplete-item", item )
-          .append( "<a>" + item.surname + ", " + item.firstname + " (" + item.cardnumber + ") <small>" + item.address + " " + item.city + " " + item.zipcode + " " + item.country + "</small></a>" )
-          .appendTo( ul );
+          if (messages) {
+              hasValidated = true;
+              event.preventDefault();
+              event.stopPropagation();
+              const hb = document.createElement("div");
+              hb.classList.add("has-error");
+              hb.classList.add("has-feedback");
+              const ul = document.createElement("ul");
+              ul.classList.add("help-block");
+              hb.append(ul);
+              container.append(hb);
+              for (const message of messages) {
+                  const li = document.createElement("li");
+                  li.append(message);
+                  ul.append(li);
+              }
+          }
       };
-      [% ELSE %]
-      patron_autocomplete(
-        $('#create_form #cardnumber'),
-        {
-          'on-select-callback': function( event, ui ) {
-            $("#create_form #cardnumber").val( ui.item.cardnumber );
-            return false;
+
+      const initForm = (form, formId, type) => {
+          const id = '#' + formId + ' #cardnumber';
+          [% IF koha_version.major <= 22 && koha_version.minor < 11 %]
+          $(id).autocomplete({
+              source: "/cgi-bin/koha/circ/ysearch.pl",
+              minLength: 3,
+              select: function( event, ui ) {
+                  var field = ui.item.cardnumber;
+                  $(id).val(field)
+                  return false;
+              }
+          })
+              .data( "ui-autocomplete" )._renderItem = function( ul, item ) {
+                  return $( "<li></li>" )
+                      .data( "ui-autocomplete-item", item )
+                      .append( "<a>" + item.surname + ", " + item.firstname + " (" + item.cardnumber + ") <small>" + item.address + " " + item.city + " " + item.zipcode + " " + item.country + "</small></a>" )
+                      .appendTo( ul );
+              };
+          [% ELSE %]
+          patron_autocomplete(
+              $(id),
+              {
+                  'on-select-callback': function( event, ui ) {
+                      $(id).val( ui.item.cardnumber );
+                      return false;
+                  }
+              }
+
+
+          );
+          [% END %]
+          form.addEventListener('submit', (event) => doSubmit(event, form, formId, type));
+      };
+
+      for (const type of ['Book', 'Article', 'BookChapter']) {
+          for (const o of ['create', 'edit']) {
+              const formId = type + '_' + o + '_form';
+              const form = document.getElementById(formId);
+              if (form) {
+                  initForm(form, formId, type);
+              }
           }
-        }
-      );
-      [% END %]
+      }
   });
   //]]>
 </script>

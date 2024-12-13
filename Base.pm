@@ -1322,7 +1322,7 @@ sub fieldmap {
         },
         ArticleTitle => {
             type      => "string",
-            label     => {
+            label_variants  => {
                 Article     => "Article title",
                 BookChapter => "Book chapter title / number"
             },
@@ -1340,7 +1340,7 @@ sub fieldmap {
         },
         ArticleAuthor => {
             type      => "string",
-            label     => {
+            label_variants  => {
                 Article     => "Article author",
                 Book        => "Book author",
                 BookChapter => "Book author"
@@ -1351,7 +1351,7 @@ sub fieldmap {
         },
         ArticlePages => {
             type      => "string",
-            label     => {
+            label_variants => {
                 Article     => "Pages in journal",
                 BookChapter => "Pages in book extract"
             },
@@ -1369,7 +1369,7 @@ sub fieldmap {
         },
         PatronJournalTitle => {
             type      => "string",
-            label     => {
+            label_variants => {
                 Article     => "Journal title",
                 Book        => "Book title",
                 BookChapter => "Book chapter title / number"
