@@ -56,9 +56,67 @@ function validateFields(form, type) {
     for (const name of inputs.keys()) {
         if (errorFields.has(name)) {
             inputs.get(name).parentElement.classList.add("has-error");
+            inputs.get(name).classList.add("is-invalid");
         } else {
             inputs.get(name).parentElement.classList.remove("has-error");
+            inputs.get(name).classList.remove("is-invalid");
         }
     }
     return messages;
 };
+
+let hasValidate = false;
+
+const doSubmit = (event, form, formId, type) => {
+    const messages = validateFields(form, type);
+    const container = document.getElementById(type + '_messages');
+    for (const c of container.children) {
+        c.remove();
+    }
+    if (messages) {
+        hasValidated = true;
+        event.preventDefault();
+        event.stopPropagation();
+        const hb = document.createElement("div");
+        hb.classList.add("has-error");
+        hb.classList.add("has-feedback");
+        hb.classList.add("text-danger");
+        const ul = document.createElement("ul");
+        ul.classList.add("help-block");
+        hb.append(ul);
+        container.append(hb);
+        for (const message of messages) {
+            const li = document.createElement("li");
+            li.append(message);
+            ul.append(li);
+        }
+    }
+};
+
+const initForm = (form, formId, type) => {
+    const id = '#' + formId + ' #cardnumber';
+    if (typeof patron_autocomplete === "function") {
+        patron_autocomplete(
+            $(id),
+            {
+                'on-select-callback': function( event, ui ) {
+                    $(id).val( ui.item.cardnumber );
+                    return false;
+                }
+            }
+
+
+        );
+    }
+    form.addEventListener('submit', (event) => doSubmit(event, form, formId, type));
+};
+
+for (const type of ['Book', 'Article', 'BookChapter']) {
+    for (const o of ['create', 'edit']) {
+        const formId = type + '_' + o + '_form';
+        const form = document.getElementById(formId);
+        if (form) {
+            initForm(form, formId, type);
+        }
+    }
+}

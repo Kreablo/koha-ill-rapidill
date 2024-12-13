@@ -53,108 +53,17 @@
   ul.fields li {
     list-style-type: none;
   }
-  #rapid_warnings {
-    margin-bottom: 0;
-  }
-  .rapid_hint {
-   margin-left: 1em;
-  }
-  .alert {
-    margin-top: 20px;
-  }
-  #localholdings,
-  #errormessage {
-    margin-top: 1rem;
-  }
-  #localholdings ul {
-    margin-top: 0.5rem;
-  }
-  #localholdings li {
-    margin: 0.3rem 0;
-  }
 </style>
 [% BLOCK backend_jsinclude %]
 <script>
   // Require a username and branch selection
   document.addEventListener('DOMContentLoaded', function(){
 
-      var listenerSelectors = '';
 
       var fieldmap = [% whole.field_map_json %];
 
       [% INCLUDE "${cwd}/shared-includes/create.js" %]
 
-
-      let hasValidate = false;
-
-      const doSubmit = (event, form, formId, type) => {
-          const messages = validateFields(form, type);
-          const container = document.getElementById(type + '_messages');
-          for (const c of container.children) {
-              c.remove();
-          }
-          if (messages) {
-              hasValidated = true;
-              event.preventDefault();
-              event.stopPropagation();
-              const hb = document.createElement("div");
-              hb.classList.add("has-error");
-              hb.classList.add("has-feedback");
-              const ul = document.createElement("ul");
-              ul.classList.add("help-block");
-              hb.append(ul);
-              container.append(hb);
-              for (const message of messages) {
-                  const li = document.createElement("li");
-                  li.append(message);
-                  ul.append(li);
-              }
-          }
-      };
-
-      const initForm = (form, formId, type) => {
-          const id = '#' + formId + ' #cardnumber';
-          [% IF koha_version.major <= 22 && koha_version.minor < 11 %]
-          $(id).autocomplete({
-              source: "/cgi-bin/koha/circ/ysearch.pl",
-              minLength: 3,
-              select: function( event, ui ) {
-                  var field = ui.item.cardnumber;
-                  $(id).val(field)
-                  return false;
-              }
-          })
-              .data( "ui-autocomplete" )._renderItem = function( ul, item ) {
-                  return $( "<li></li>" )
-                      .data( "ui-autocomplete-item", item )
-                      .append( "<a>" + item.surname + ", " + item.firstname + " (" + item.cardnumber + ") <small>" + item.address + " " + item.city + " " + item.zipcode + " " + item.country + "</small></a>" )
-                      .appendTo( ul );
-              };
-          [% ELSE %]
-          patron_autocomplete(
-              $(id),
-              {
-                  'on-select-callback': function( event, ui ) {
-                      $(id).val( ui.item.cardnumber );
-                      return false;
-                  }
-              }
-
-
-          );
-          [% END %]
-          form.addEventListener('submit', (event) => doSubmit(event, form, formId, type));
-      };
-
-      for (const type of ['Book', 'Article', 'BookChapter']) {
-          for (const o of ['create', 'edit']) {
-              const formId = type + '_' + o + '_form';
-              const form = document.getElementById(formId);
-              if (form) {
-                  initForm(form, formId, type);
-              }
-          }
-      }
   });
   //]]>
 </script>

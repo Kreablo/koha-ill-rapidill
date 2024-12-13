@@ -1,6 +1,9 @@
 [% USE Koha %]
 
 [% cwd = whole.cwd %]
+[% PROCESS "${cwd}/shared-includes/form.inc" %]
+[% SET staff = 0 %]
+[% SET requests_back_url = '/cgi-bin/koha/opac-illrequests.pl' %]
 
 [% IF whole.error %]
   [% IF whole.status == 'missing_fields' %]
@@ -26,103 +29,32 @@
 <p>We have now created your request.</p>
 
 [% ELSIF whole.stage == "init" %]
-<form method="POST" id="create_form">
-  <fieldset class="rows">
-    <legend>Place an interlibrary loan request</legend>
-    <input name="stage" id="stage" value="validate" type="hidden"/>
-    <input name="method" id="method" value="create" type="hidden"/>
-    <input name="backend" id="backend" value="[% whole.value.other.backend %]" type="hidden"/>
-    [% IF Koha.Version.major >= 24 %][% INCLUDE 'csrf-token.inc' %][% END %]
-    <ol>
-      <li>
-        <label for="RapidRequestType">Type:</label>
-        <select name="RapidRequestType" id="type">
-          [% options = { Book => 'Book', Article => 'Article', BookChapter => 'Book chapter' } %]
-          [% FOREACH opt IN options.keys.sort %]
-          [% IF ( whole.value.other.RapidRequestType == opt ) %]
-          <option value="[% opt %]" selected="selected">[% options.$opt %]</option>
-          [% ELSE %]
-          <option value="[% opt %]">[% options.$opt %]</option>
-          [% END %]
-          [% END %]
-        </select>
-      </li>
-      [% FOREACH field IN whole.field_map %]
-      [% key = field.key %]
-      [% IF !field.exclude %]
-      <li id="rapid_field_[% key %]">
-        <label id="[% key %]_label" for="[% key %]"></label>
-        <input type="text" name="[% key %]" id="[% key %]" value="[% whole.value.other.$key %]" />
-        [% IF field.help %]
-        ([% field.help %])
-        [% END %]
-      </li>
-      [% END %]
-      [% END %]
-    </ol>
-  </fieldset>
-  <fieldset class="rows">
-    <legend>Patron options</legend>
-    <ol>
-      <li>
-        <label class="required" for="branchcode">Destination library:</label>
-        <select id="branchcode" name="branchcode">
-          <option value="" />
-          [% FOREACH branch IN branches %]
-          [% IF ( whole.value.other.branchcode == branch.branchcode ) %]
-          <option value="[% branch.branchcode %]" selected="selected">[% branch.branchname %]</option>
-          [% ELSE %]
-          <option value="[% branch.branchcode %]">[% branch.branchname %]</option>
-          [% END %]
-          [% END %]
-        </select>
-      </li>
-    </ol>
-  </fieldset>
-  <fieldset class="action">
-    <div id="messageswrapper">
-      <div role="alert" class="alert alert-warning" id="request-lookup" style="display: none">
-        Checking item availability via RapidILL
-        <img src="[% interface | html %]/[% theme | html %]/images/spinner-small.gif" alt="" />
-      </div>
-      <div role="alert" class="alert alert-success" id="request-possible" style="display: none">Item is available for request</div>
-      <div role="alert" class="alert alert-warning" id="request-notpossible" style="display: none">
-        Item cannot be requested
-        <div id="localholdings" style="display:none"></div>
-        <div id="errormessage" style="display:none"></div>
-      </div>
-    </div>
-    <input id="rapid_submit" type="submit" value="Make request"/>
-    <a class="cancel" href="/cgi-bin/koha/opac-illrequests.pl">Cancel</a>
-  </fieldset>
-</form>
-
+<ul class="nav nav-tabs" role="tablist" />
+   <li role="presentation" class="active nav-item"><a class="nav-link active" href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">Book</a></li>
+   <li role="presentation" class="nav-item"><a class="nav-link" href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">Article</a></li>
+   <li role="presentation" class="nav-item"><a class="nav-link" href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">Chapter</a></li>
+</ul>
+<div class="tab-content">
+  <div role="tabpanel" class="tab-pane active" id="type-book">
+    [% PROCESS render_create_form rapid_request_type="Book" %]
+  </div>
+  <div role="tabpanel" class="tab-pane" id="type-article">
+    [% PROCESS render_create_form rapid_request_type="Article" %]
+  </div>
+  <div role="tabpanel" class="tab-pane" id="type-chapter">
+    [% PROCESS render_create_form rapid_request_type="BookChapter" %]
+  </div>
+</div>
+<style>
+  ul.fields li {
+    list-style-type: none;
+  }
+</style>
 [% BLOCK backend_jsinclude %]
 <script>
   document.addEventListener('DOMContentLoaded', function(){
-    $("#create_form .action").children().not("#messageswrapper").hide();
-    
-    // Fields that are not in groups, but cannot be empty
-    var notEmpty = [ ];
-
-    var listenerSelectors = '';
-
     var fieldmap = [% whole.field_map_json %];
-    showFields();
-
     [% INCLUDE "${cwd}/shared-includes/create.js" %]
-
-    addLabels();
-    showFields();
-    validateFields();
-    addHandlers();
-
-    $('#type').change(function() {
-      addLabels();
-      showFields();
-      validateFields();
-      addHandlers();
-    });
   });
 </script>
 [% END %]
