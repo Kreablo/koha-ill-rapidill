@@ -29,6 +29,7 @@ use Koha::Illbackends::RapidILL::Lib::API;
 use Koha::Libraries;
 use Koha::Patrons;
 use C4::Languages;
+use Koha::Illbackends::RapidILL::Lib::Config qw( config );
 
 our $VERSION = "1.0.0";
 
@@ -43,7 +44,8 @@ sub new {
     my $api = Koha::Illbackends::RapidILL::Lib::API->new($VERSION);
 
     my $self = {
-        _api    => $api
+        _api    => $api,
+        _config => config()
     };
 
     $self->{_logger} = $params->{logger} if ( $params->{logger} ); 
@@ -85,7 +87,8 @@ sub create {
         field_map      => $self->fieldmap_sorted,
         field_map_json => to_json($self->fieldmap()),
         lang_dialect   => $lang,
-        lang_all       => $lang_split[0]
+        lang_all       => $lang_split[0],
+        rapidill_config => $self->{_config}
     };
 
     # Check for borrowernumber, but only if we're not receiving an OpenURL
@@ -423,6 +426,7 @@ sub edititem {
         # Create response
         return {
             cwd            => dirname(__FILE__),
+            rapidill_config => $self->{_config},
             error          => 0,
             status         => '',
             message        => '',

@@ -25,21 +25,34 @@
 <p>[% MSG.created_request_confirm | html %]</p>
 
 [% ELSIF whole.stage == "init" %]
+[% SET active = whole.rapidill_config.enabled_types[0] %]
 <ul class="nav nav-tabs" role="tablist" />
-   <li role="presentation" class="active"><a href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">[% MSG.option_book | html %]</a></li>
-   <li role="presentation"><a href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">[% MSG.option_article | html %]</a></li>
-   <li role="presentation"><a href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">[% MSG.option_book_chapter | html %]</a></li>
+   [% IF whole.rapidill_config.enabled_types.grep('^Book$').size() > 0 %]
+   <li role="presentation" [% IF active == "Book" %]class="active"[% END %]><a href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">[% MSG.option_book | html %]</a></li>
+   [% END %]
+   [% IF whole.rapidill_config.enabled_types.grep('^Article$').size() > 0 %]
+   <li role="presentation" [% IF active == "Article" %]class="active"[% END %]><a href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">[% MSG.option_article | html %]</a></li>
+   [% END %]
+   [% IF whole.rapidill_config.enabled_types.grep('^BookChapter$').size() > 0 %]
+   <li role="presentation" [% IF active == "BookChapter" %]class="active"[% END %]><a href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">[% MSG.option_book_chapter | html %]</a></li>
+   [% END %]
 </ul>
 <div class="tab-content">
+ [% IF whole.rapidill_config.enabled_types.grep('^Book$') %]
   <div role="tabpanel" class="tab-pane active" id="type-book">
     [% PROCESS render_create_form rapid_request_type="Book" %]
   </div>
+ [% END %]
+ [% IF whole.rapidill_config.enabled_types.grep('^Article$') %]
   <div role="tabpanel" class="tab-pane" id="type-article">
     [% PROCESS render_create_form rapid_request_type="Article" %]
   </div>
+ [% END %]
+ [% IF whole.rapidill_config.enabled_types.grep('^BookChapter$') %]
   <div role="tabpanel" class="tab-pane" id="type-chapter">
     [% PROCESS render_create_form rapid_request_type="BookChapter" %]
   </div>
+ [% END %]
 </div>
 [% END %]
 <style>

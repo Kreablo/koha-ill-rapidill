@@ -25,15 +25,12 @@ use HTTP::Request;
 use JSON qw( encode_json );
 use CGI;
 use URI;
-use File::Basename qw( dirname );
-use YAML::Syck qw( LoadFile );
 
 use Koha::Logger;
 use C4::Context;
-use Koha::Config;
+use Koha::Illbackends::RapidILL::Lib::Config qw( config );
 
 use constant {
-    CONFIG_FNAME => "rapidill-config.yaml",
     RAPIDILL_SERVICE_URL => "https://rapid.exlibrisgroup.com/rapid5api/apiservice.asmx?WSDL"
 };
 
@@ -105,16 +102,8 @@ sub UpdateRequest {
 
 }
 
-sub _config {
-    my $conf_dir = dirname(Koha::Config->guess_koha_conf);
-
-    my $config = LoadFile( $conf_dir . "/" . CONFIG_FNAME );
-
-    return $config;
-}
-
 sub _get_credentials {
-    my $config = _config();
+    my $config = config();
 
 
     if ($config && $config->{credentials}) {
@@ -148,7 +137,7 @@ sub _class {
 }
 
 sub _instance {
-    my $config = _config();
+    my $config = config();
 
     my $class = _class($config->{api_class} ?  $config->{api_class} : 'SOAP::Lite');
 
