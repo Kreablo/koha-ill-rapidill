@@ -25,7 +25,7 @@
 <p>[% MSG.created_request_confirm | html %]</p>
 
 [% ELSIF whole.stage == "init" %]
-[% SET active = whole.rapidill_config.enabled_types[0] %]
+[% SET active = whole.rapidill_config.enabled_types.0 %]
 <ul class="nav nav-tabs" role="tablist" />
    [% IF whole.rapidill_config.enabled_types.grep('^Book$').size() > 0 %]
    <li role="presentation" [% IF active == "Book" %]class="active"[% END %]><a href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">[% MSG.option_book | html %]</a></li>
