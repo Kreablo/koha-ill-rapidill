@@ -1298,6 +1298,7 @@ sub fieldmap {
             ill       => "issn",
             position  => 11,
             help      => "Multiple ISSNs must be separated by a space",
+            help_msg  => "issn_help",
             materials => [ "Article" ],
             required  => {
                 "Article" => {
@@ -1327,6 +1328,7 @@ sub fieldmap {
             ill       => "isbn",
             position  => 10,
             help      => "Multiple ISBNs must be separated by a space",
+            help_msg  => "isbn_help",
             materials => [ "Book", "BookChapter" ],
             required  => {
                 "Book" => {
@@ -1340,6 +1342,7 @@ sub fieldmap {
             label_msg => "lccn",
             position  => 12,
             help      => "Multiple LCCNs must be separated by a space",
+            help_msg  => "lccn_help",
             materials => [ "Book", "BookChapter" ]
         },
         ArticleTitle => {

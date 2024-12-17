@@ -22,11 +22,11 @@
         <input type="text" name="[% key %]" class="form-control[% IF $field_errors.$key %] has-error[% END %]"
                id="[% rapid_request_type %]_[% key %]_input"
                value="[% other.$key | html %]"
-               [% IF field.help %]aria-describedby="[% prefix %]helpBlock"[% END %]
+               [% IF field.help_msg %]aria-describedby="[% prefix %]helpBlock"[% END %]
                [% IF validation_group %]data-validation-group="[% validation_group %]"[% END %]
                 />
         [% IF field.help %]
-        <span id="[% prefix %]helpBlock" class="help-block">[% field.help | html %]</span>
+        <span id="[% prefix %]helpBlock" class="help-block">[% MSG.${field.help_msg} | html %]</span>
         [% END %]
       </li>
       [% END %]
