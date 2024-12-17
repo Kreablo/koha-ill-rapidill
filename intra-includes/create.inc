@@ -38,18 +38,18 @@
    [% END %]
 </ul>
 <div class="tab-content">
- [% IF whole.rapidill_config.enabled_types.grep('^Book$') %]
-  <div role="tabpanel" class="tab-pane active" id="type-book">
+ [% IF whole.rapidill_config.enabled_types.grep('^Book$').size() > 0 %]
+  <div role="tabpanel" class="tab-pane[% IF active == "Book" %] active[% END %]" id="type-book">
     [% PROCESS render_create_form rapid_request_type="Book" %]
   </div>
  [% END %]
- [% IF whole.rapidill_config.enabled_types.grep('^Article$') %]
-  <div role="tabpanel" class="tab-pane" id="type-article">
+ [% IF whole.rapidill_config.enabled_types.grep('^Article$').size() > 0 %]
+  <div role="tabpanel" class="tab-pane[% IF active == "Article" %] active[% END %]" id="type-article">
     [% PROCESS render_create_form rapid_request_type="Article" %]
   </div>
  [% END %]
- [% IF whole.rapidill_config.enabled_types.grep('^BookChapter$') %]
-  <div role="tabpanel" class="tab-pane" id="type-chapter">
+ [% IF whole.rapidill_config.enabled_types.grep('^BookChapter$').size() > 0 %]
+  <div role="tabpanel" class="tab-pane[% IF active == "BookChapter" %] active[% END %]" id="type-chapter">
     [% PROCESS render_create_form rapid_request_type="BookChapter" %]
   </div>
  [% END %]

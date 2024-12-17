@@ -28,6 +28,7 @@ use URI;
 
 use Koha::Logger;
 use C4::Context;
+use Koha::Patrons;
 use Koha::Illbackends::RapidILL::Lib::Config qw( config );
 
 use constant {
@@ -41,9 +42,11 @@ RapidILL - Client interface to RapidILL API plugin (koha-plugin-rapidill)
 =cut
 
 sub new {
-    my ($class) = @_;
+    my ($class, $version, $fieldmap) = @_;
 
     my $self = {
+        version => $version,
+        fieldmap => $fieldmap
     };
 
     bless $self, $class;
@@ -59,26 +62,29 @@ Make a call to the RapidILL service api
 sub InsertRequest {
     my ($self, $metadata, $borrowernumber) = @_;
 
-    my $borrower = Koha::Patrons->find( $borrowernumber );
+    if (defined $borrowernumber) {
+        my $borrower = Koha::Patrons->find( $borrowernumber );
 
-    my @name = grep { defined } ($borrower->firstname, $borrower->surname);
+        my @name = grep { defined } ($borrower->firstname, $borrower->surname);
 
-    $metadata = {
-        PatronId             => $borrower->borrowernumber,
-        PatronName           => join (" ", @name),
-        IsHoldingsCheckOnly  => 0,
-        DoBlockLocalOnly     => 0,
-        %{$metadata}
-    };
+        $metadata = {
+            PatronId             => $borrower->borrowernumber,
+            PatronName           => join (" ", @name),
+            IsHoldingsCheckOnly  => 0,
+            DoBlockLocalOnly     => 0,
+            %{$metadata}
+        };
 
-    $metadata->{PatronEmail} = $borrower->email if $borrower->email;
+        $metadata->{PatronEmail} = $borrower->email if $borrower->email;
+    }
+
 
     my $input = {
         ClientAppName        => "Koha RapidILL client",
         %{$metadata}
     };
 
-    return _instance()->call('InsertRequest', $input);
+    return _instance()->call('InsertRequest', $input, $self->{fieldmap} );
 }
 
 =head3 UpdateRequest
@@ -98,7 +104,7 @@ sub UpdateRequest {
         %{$metadata}
     };
 
-    return _instance()->call( 'UpdateRequest', $input );
+    return _instance()->call( 'UpdateRequest', $input, $self->{fieldmap} );
 
 }
 
@@ -130,7 +136,7 @@ sub _class {
     }
 
     if ($name eq 'SOAP::Lite') {
-        return $package . 'Api_SOAP_Lite';
+        return $package . 'API_SOAP_Lite';
     }
 
     die "Unsupported class: '$name'";
@@ -140,6 +146,12 @@ sub _instance {
     my $config = config();
 
     my $class = _class($config->{api_class} ?  $config->{api_class} : 'SOAP::Lite');
+
+    my $classfile = $class;
+    $classfile =~ s|::|/|g;
+    $classfile .= '.pm';
+
+    require $classfile;
 
     return $class->new(RAPIDILL_SERVICE_URL, _get_credentials());
 }

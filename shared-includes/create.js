@@ -73,7 +73,7 @@ const doSubmit = (event, form, formId, type) => {
     for (const c of container.children) {
         c.remove();
     }
-    if (messages) {
+    if (messages.length > 0) {
         hasValidated = true;
         event.preventDefault();
         event.stopPropagation();

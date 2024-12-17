@@ -30,6 +30,7 @@ use Koha::Libraries;
 use Koha::Patrons;
 use C4::Languages;
 use Koha::Illbackends::RapidILL::Lib::Config qw( config );
+use Data::Dumper;
 
 our $VERSION = "1.0.0";
 
@@ -41,10 +42,7 @@ use constant {
 sub new {
     my ($class, $params) = @_;
 
-    my $api = Koha::Illbackends::RapidILL::Lib::API->new($VERSION);
-
     my $self = {
-        _api    => $api,
         _config => config()
     };
 
@@ -55,6 +53,8 @@ sub new {
     };
 
     bless($self, $class);
+
+    $self->{_api} = Koha::Illbackends::RapidILL::Lib::API->new($VERSION, $self->fieldmap);
 
     return $self;
 }
@@ -67,6 +67,9 @@ Handle the "create" flow
 
 sub create {
     my ($self, $params) = @_;
+
+
+    warn Dumper($params);
 
     my $other = $params->{other};
     my $stage = $other->{stage};
@@ -194,7 +197,7 @@ sub create {
             }
         }
         else {
-            my $requestability = $self->_check_requestability($params);
+            my $requestability = $self->_check_requestability($params->{other});
             if (!$requestability->{requestable}) {
                 $response->{field_map} = $self->fieldmap_sorted;
                 $response->{field_map_json} = to_json($self->fieldmap());
@@ -969,24 +972,19 @@ sub metadata {
 
     while (my $attr = $attrs->next) {
         if ($fields->{$attr->type}) {
-            my $label = ref $fields->{$attr->type}->{label} eq "HASH" ?
-                $fields->{$attr->type}->{label}->{$type} :
-                $fields->{$attr->type}->{label};
-            $metadata->{$label} = $attr->value;
+            $metadata->{$attr->type} = $attr->value;
         }
     }
 
     # OPAC list view uses completely different property names for author
     # and title. Cater for that.
-    if ($type eq "Article" || $type eq "BookChapter") {
-        my $title_key = $fields->{ArticleTitle}->{label}->{$type};
-        my $author_key = $fields->{ArticleAuthor}->{label}->{$type};
-        $metadata->{Title} = $metadata->{$title_key} if $metadata->{$title_key};
-        $metadata->{Author} = $metadata->{$author_key} if $metadata->{$author_key};
-    } elsif ($type eq "Book") {
-        $metadata->{Title} = $metadata->{'Book title'} if $metadata->{'Book title'};
-        $metadata->{Author} = $metadata->{'Book author'} if $metadata->{'Book author'};
-    }
+    # if ($type eq "Article" || $type eq "BookChapter") {
+    #$metadata->{Title} = $metadata->{ArticleTitle} if $metadata->{ArticleTitle};
+    #$metadata->{Author} = $metadata->{ArticleAuthor} if $metadata->{ArticleAuthor};
+    #} elsif ($type eq "Book") {
+    #$metadata->{Title} = $metadata->{JournalTitle} if $metadata->{JournalTitle};
+    #$metadata->{Author} = $metadata->{ArticleAuthor} if $metadata->{ArticleAuthor};
+    #}
 
     return $metadata;
 }
@@ -1004,23 +1002,8 @@ sub metadata0 {
 
     while (my ($k, $v) = each %p) {
         if ($fields->{$k}) {
-            my $label = ref $fields->{$k}->{label} eq "HASH" ?
-                $fields->{$k}->{label}->{$type} :
-                $fields->{$k}->{label};
-            $metadata->{$label} = $v;
+            $metadata->{$k} = $v;
         }
-    }
-
-    # OPAC list view uses completely different property names for author
-    # and title. Cater for that.
-    if ($type eq "Article" || $type eq "BookChapter") {
-        my $title_key = $fields->{ArticleTitle}->{label}->{$type};
-        my $author_key = $fields->{ArticleAuthor}->{label}->{$type};
-        $metadata->{Title} = $metadata->{$title_key} if $metadata->{$title_key};
-        $metadata->{Author} = $metadata->{$author_key} if $metadata->{$author_key};
-    } elsif ($type eq "Book") {
-        $metadata->{Title} = $metadata->{'Book title'} if $metadata->{'Book title'};
-        $metadata->{Author} = $metadata->{'Book author'} if $metadata->{'Book author'};
     }
 
     return $metadata;
@@ -1509,6 +1492,8 @@ sub _check_requestability {
     # First, is this item available locally
     $metadata->{IsHoldingsCheckOnly} = 1;
     $metadata->{DoBlockLocalOnly} = 0;
+
+    die Dumper($metadata);
 
     my $response = $self->{_api}->InsertRequest( $metadata );
 

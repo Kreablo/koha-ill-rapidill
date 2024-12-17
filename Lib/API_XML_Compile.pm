@@ -28,3 +28,5 @@ sub call {
     my $response = $client->($request);
 
 }
+
+1;

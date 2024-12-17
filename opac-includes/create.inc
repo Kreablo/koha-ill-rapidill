@@ -40,21 +40,34 @@
 <p>We have now created your request.</p>
 
 [% ELSIF whole.stage == "init" %]
+[% SET active = whole.rapidill_config.enabled_types.0 %]
 <ul class="nav nav-tabs" role="tablist" />
-   <li role="presentation" class="active nav-item"><a class="nav-link active" href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">[% MSG.option_book %]</a></li>
-   <li role="presentation" class="nav-item"><a class="nav-link" href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">[% MSG.option_article %]</a></li>
-   <li role="presentation" class="nav-item"><a class="nav-link" href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">[% MSG.option_book_chapter %]</a></li>
+   [% IF whole.rapidill_config.enabled_types.grep('^Book$').size() > 0 %]
+   <li role="presentation" class="nav-item"><a class="nav-link[% IF active == "Book" %] active[% END %]" href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">[% MSG.option_book %]</a></li>
+   [% END %]
+   [% IF whole.rapidill_config.enabled_types.grep('^Article$').size() > 0 %]
+   <li role="presentation" class="nav-item"><a class="nav-link[% IF active == "Article" %] active[% END %]" href="#type-article" aria-controls="type-article" role="tab" data-toggle="tab">[% MSG.option_article %]</a></li>
+   [% END %]
+   [% IF whole.rapidill_config.enabled_types.grep('^BookChapter$').size() > 0 %]
+   <li role="presentation" class="nav-item"><a class="nav-link[% IF active == "BookChapter" %] active[% END %]" href="#type-chapter" aria-controls="type-chapter" role="tab" data-toggle="tab">[% MSG.option_book_chapter %]</a></li>
+   [% END %]
 </ul>
 <div class="tab-content">
-  <div role="tabpanel" class="tab-pane active" id="type-book">
+   [% IF whole.rapidill_config.enabled_types.grep('^Book$').size() > 0 %]
+  <div role="tabpanel" class="tab-pane[% IF active == "Book" %] active[% END %]" id="type-book">
     [% PROCESS render_create_form rapid_request_type="Book" %]
   </div>
-  <div role="tabpanel" class="tab-pane" id="type-article">
+   [% END %]
+   [% IF whole.rapidill_config.enabled_types.grep('^Article$').size() > 0 %]
+  <div role="tabpanel" class="tab-pane[% IF active == "Article" %] active[% END %]" id="type-article">
     [% PROCESS render_create_form rapid_request_type="Article" %]
   </div>
-  <div role="tabpanel" class="tab-pane" id="type-chapter">
+   [% END %]
+   [% IF whole.rapidill_config.enabled_types.grep('^BookChapter$').size() > 0 %]
+  <div role="tabpanel" class="tab-pane[% IF active == "BookChapter" %] active[% END %]" id="type-chapter">
     [% PROCESS render_create_form rapid_request_type="BookChapter" %]
   </div>
+   [% END %]
 </div>
 <style>
   ul.fields li {
