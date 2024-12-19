@@ -1351,7 +1351,7 @@ sub fieldmap {
         DOI => {
             type      => "string",
             label_msg => "doi_label",
-            position  => 10,
+            position  => 0,
             include_in_metadata => 0,
             materials => [ "Article", "BookChapter" ]
         },
