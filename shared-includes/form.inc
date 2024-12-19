@@ -10,6 +10,10 @@
       [% SET key = field.key %]
       [% SET prefix = "${rapid_request_type}_${key}" %]
       [% SET included_material = 0 %]
+      [% SET value = whole.value.other.$key %]
+      [% IF !value && whole.value.$key %]
+         [% SET value = whole.value.$key %]
+      [% END %]
       [% FOREACH material IN field.materials %]
         [% IF material == rapid_request_type %]
           [% SET included_material = 1 %]
@@ -21,7 +25,7 @@
         [% SET validation_group = $field.required && $field.required.$rapid_request_type ? $field.required && $field.required.$rapid_request_type.group : 0 %]
         <input type="text" name="[% key %]" class="form-control[% IF $field_errors.$key %] has-error[% END %]"
                id="[% rapid_request_type %]_[% key %]_input"
-               value="[% other.$key | html %]"
+               value="[% value | html %]"
                [% IF field.help_msg %]aria-describedby="[% prefix %]helpBlock"[% END %]
                [% IF validation_group %]data-validation-group="[% validation_group %]"[% END %]
                 />
@@ -41,7 +45,7 @@
       [% ELSIF whole.status == 'missing_branch' %]
         <li>[% MSG.note_branch_is_mandatory | html %]</li>
       [% ELSIF whole.status == 'not_requestable' %]
-        <li>[% MSG.item_not_requestable | html %]: [% IF whole.reason == 'given-by-rapidill' %][% whole._rapidill_reason | html %] [% IF whole._rapidill_note %]<span class="rapidill-note">[% whole._rapidill_note %]<span>[% END %][% ELSIF whole.reason == 'locally-available' %][% PROCESS locally_available holdings=whole._rapidill_holdings %][% END %]</li>
+        <li>[% MSG.item_not_requestable | html %]: [% IF whole.rapidill_reason == 'given-by-rapidill' %][% whole.rapidill_note | html %][% ELSIF whole.rapidill_reason == 'locally-available' %][% PROCESS locally_available holdings=whole.rapidill_holdings %][% END %]</li>
       [% ELSIF whole.status == 'invalid_borrower' %]
         <li>[% MSG.note_invalid_borrower_details | html %]</li>
       [% ELSIF whole.status == 'invalid_metadata' %]
@@ -76,14 +80,14 @@
   <fieldset class="form-group">
     <legend>[% MSG.enter_metadata | html %]</legend>
     [% IF variant == "create" %]
-    <input name="stage" id="stage" value="validate" type="hidden"/>
-    <input name="method" id="method" value="create" type="hidden"/>
+    <input name="stage" value="validate" type="hidden"/>
+    <input name="method" value="create" type="hidden"/>
     [% ELSE %]
-    <input name="stage" id="stage" value="form" type="hidden"/>
-    <input name="method" id="method" value="edititem" type="hidden"/>
+    <input name="stage" value="form" type="hidden"/>
+    <input name="method" value="edititem" type="hidden"/>
     [% END %]
     <input name="RapidRequestType" value="[% rapid_request_type %]" type="hidden" />
-    <input name="backend" id="backend" value="RapidILL" type="hidden"/>
+    <input name="backend" value="RapidILL" type="hidden"/>
     [% IF Koha.Version.major >= 24 %][% INCLUDE 'csrf-token.inc' %][% END %]
     <ul class="fields">
       [% FOREACH field IN whole.field_map %]

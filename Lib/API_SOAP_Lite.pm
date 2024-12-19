@@ -1,6 +1,7 @@
 package Koha::Illbackends::RapidILL::Lib::API_SOAP_Lite;
 
 use SOAP::Lite +trace => 'all';
+use Data::Dumper;
 
 sub new {
     my $class = shift;
@@ -8,7 +9,8 @@ sub new {
     my $credentials = shift;
     my $self = {
         url => $url,
-        credentials => $credentials
+        credentials => $credentials,
+        _kohalogger => Koha::Logger->get({ category => $class })
     };
     return bless $self, $class;
 }
@@ -19,12 +21,12 @@ sub call {
     my $soap = SOAP::Lite->proxy($self->{url});
 
     my @params = ();
-    my $logger = Koha::Logger->get({ category => __PACKAGE__ });
 
     my %stuff = ( %$request, %{$self->{credentials}} );
 
     while (my ($name, $value) = each %stuff) {
         $value =~ s/^\s*(.*?)\s*$/$1/;
+        next if $value eq '';
         my $type = $fieldmap->{$name}->{type};
         if ($name eq 'RapidRequestType') {
             $type = "rapid5api:RequestType"
@@ -39,7 +41,7 @@ sub call {
             }
         }
         if ($type eq "array") {
-            my @a = map { SOAP::Data->value($value)->type('string') } (split / +/, $value);
+            my @a = map { SOAP::Data->name('rapid5api:string')->value($_)->type('string') } (split / +/, $value);
             $value = \@a;
             $type = "rapid5api:ArrayOfString";
         }
@@ -61,13 +63,39 @@ sub call {
             $detail .= "$k: " . $resp->faultdetail->{error}->{$k} . "\n"
         }
         my $msg = $resp->faultcode . ' ' . $resp->faultstring . ":\n" . $detail;
-        $logger->error($msg);
-        return undef;
+        $self->_log->error($msg);
+        return {
+          IsSuccess => 0,
+          errormsg => msg
+        };
     }
 
-    $logger->debug(Dumper($resp->result));
+    if ($self->_is_debug) {
+        $self->_debug("result: " . Dumper($resp->result));
+    }
+
+    my $result = $resp->result;
+
+    $result->{IsSuccessful} = 0 if $result->{IsSuccessful} eq 'false';
+    $result->{FoundMatch} = 0 if $result->{FoundMatch} eq 'false';
+    $result->{IsLocalHolding} = 0 if $result->{IsLocalHolding} eq 'false';
 
     return $resp->result;
  }
+
+sub _log {
+    my $self = shift;
+    return $self->{_kohalogger};
+}
+
+sub _is_debug {
+    my $self = shift;
+    return $self->{_kohalogger}->is_debug;
+}
+
+sub _debug {
+    my $self = shift;
+    return $self->{_kohalogger}->debug(@_);
+}
 
 1;

@@ -28,7 +28,9 @@ use C4::Installer;
 use Koha::Illbackends::RapidILL::Lib::API;
 use Koha::Libraries;
 use Koha::Patrons;
+use Koha::Logger;
 use C4::Languages;
+use C4::Context;
 use Koha::Illbackends::RapidILL::Lib::Config qw( config );
 use Data::Dumper;
 
@@ -43,11 +45,12 @@ sub new {
     my ($class, $params) = @_;
 
     my $self = {
-        _config => config()
+        _config => config(),
+        _kohalogger => Koha::Logger->get({ category => $class })
     };
 
-    $self->{_logger} = $params->{logger} if ( $params->{logger} ); 
-    $self->{templates} = { 
+    $self->{_logger} = $params->{logger} if ( $params->{logger} );
+    $self->{templates} = {
         'RAPIDILL_REQUEST_FAILED'    => dirname(__FILE__) . '/intra-includes/log/rapidill_request_failed.tt',
         'RAPIDILL_REQUEST_SUCCEEDED' => dirname(__FILE__) . '/intra-includes/log/rapidill_request_succeeded.tt'
     };
@@ -69,7 +72,9 @@ sub create {
     my ($self, $params) = @_;
 
 
-    warn Dumper($params);
+    if ($self->_is_debug) {
+        $self->_debug("RapidILL::create:" . Dumper($params));
+    }
 
     my $other = $params->{other};
     my $stage = $other->{stage};
@@ -197,18 +202,23 @@ sub create {
             }
         }
         else {
-            my $requestability = $self->_check_requestability($params->{other});
-            if (!$requestability->{requestable}) {
-                $response->{field_map} = $self->fieldmap_sorted;
-                $response->{field_map_json} = to_json($self->fieldmap());
-                $response->{status} = "not_requestable";
-                $response->{error}  = 1;
-                $response->{stage}  = 'init';
-                $response->{value}  = $params;
-                $response->{_rapidill_reason} = $requestability->{reason};
-                $response->{_rapidill_note} = $requestability->{note} if exists $requestability->{note};
-                $response->{_rapidill_holdings} = $requestability->{holdings} if exists $requestability->{holdings};
-                return $response;
+            if (C4::Context->preference('ILLCheckAvailability')) {
+                my $requestability = $self->_check_requestability($params->{other});
+                if ($self->_is_debug) {
+                    $self->_debug("requestability: " . Dumper($requestability));
+                }
+                if (!$requestability->{requestable}) {
+                    $response->{field_map} = $self->fieldmap_sorted;
+                    $response->{field_map_json} = to_json($self->fieldmap());
+                    $response->{status} = "not_requestable";
+                    $response->{error}  = 1;
+                    $response->{stage}  = 'init';
+                    $response->{value}  = $params;
+                    $response->{rapidill_reason} = $requestability->{reason};
+                    $response->{rapidill_note} = $requestability->{note} if exists $requestability->{note};
+                    $response->{rapidill_holdings} = $requestability->{holdings} if exists $requestability->{holdings};
+                    return $response;
+                }
             }
 
             # We can submit a request directly to RapidILL
@@ -796,8 +806,12 @@ sub submit_and_request {
     # First we create a submission
     my $submission = $self->create_submission($params);
 
+    if (C4::Context->preference('ILLModuleUnmediated')) {
     # Now use the submission to try and create a request with Rapid
-    return $self->create_request($submission);
+        return $self->create_request($submission);
+    } else {
+        return { success => 1 };
+    }
 }
 
 =head3 create_request
@@ -827,7 +841,7 @@ sub create_request {
     # If the call to RapidILL was successful,
     # add the Rapid request ID to our submission's metadata
     if ($response->is_success) {
-        my $body = from_json($response->decoded_content);
+        my $body = { result => $response->decoded_content };
         if ($body->{result}->{IsSuccessful}) {
             my $rapid_id = $body->{result}->{RapidRequestId};
             if ($rapid_id && length $rapid_id > 0) {
@@ -852,12 +866,8 @@ sub create_request {
 
             return { success => 1 };
         } else {
-            $error = $body->{result}->{VerificationNote};
+            $error = $body->{result}->{errormsg} ? $body->{result}->{errormsg} : $body->{result}->{VerificationNote};
         }
-    }
-
-    if (!$error) {
-        $error = $response->message;
     }
 
     # The call to RapidILL failed for some reason. Add the message we got back from the API
@@ -966,25 +976,26 @@ sub metadata {
     my $attrs = $request->extended_attributes;
     my $fields = $self->fieldmap;
 
-    my $type = $attrs->find({ type => "RapidRequestType" })->value;
+    my $typeAttr = $attrs->find({ type => "RapidRequestType" });
+    my $type = defined $typeAttr ? $typeAttr->value : 'Article';
 
     my $metadata = {};
 
     while (my $attr = $attrs->next) {
-        if ($fields->{$attr->type}) {
+        if ($fields->{$attr->type} && $fields->{$attr->type}->{include_in_metadata}) {
             $metadata->{$attr->type} = $attr->value;
         }
     }
 
     # OPAC list view uses completely different property names for author
     # and title. Cater for that.
-    # if ($type eq "Article" || $type eq "BookChapter") {
-    #$metadata->{Title} = $metadata->{ArticleTitle} if $metadata->{ArticleTitle};
-    #$metadata->{Author} = $metadata->{ArticleAuthor} if $metadata->{ArticleAuthor};
-    #} elsif ($type eq "Book") {
-    #$metadata->{Title} = $metadata->{JournalTitle} if $metadata->{JournalTitle};
-    #$metadata->{Author} = $metadata->{ArticleAuthor} if $metadata->{ArticleAuthor};
-    #}
+    if ($type eq "Article" || $type eq "BookChapter") {
+        $metadata->{Title} = $metadata->{ArticleTitle} if $metadata->{ArticleTitle};
+        $metadata->{Author} = $metadata->{ArticleAuthor} if $metadata->{ArticleAuthor};
+    } elsif ($type eq "Book") {
+        $metadata->{Title} = $metadata->{JournalTitle} if $metadata->{JournalTitle};
+        $metadata->{Author} = $metadata->{ArticleAuthor} if $metadata->{ArticleAuthor};
+    }
 
     return $metadata;
 }
@@ -1001,7 +1012,7 @@ sub metadata0 {
     my %p = %$params;
 
     while (my ($k, $v) = each %p) {
-        if ($fields->{$k}) {
+        if ($fields->{$k} && $fields->{$k}->{include_in_metadata}) {
             $metadata->{$k} = $v;
         }
     }
@@ -1276,7 +1287,8 @@ sub fieldmap {
                 Article     => 'article',
                 BookChapter => 'chapter'
             },
-            materials => [ "Article", "Book", "BookChapter" ]
+            include_in_metadata => 1,
+            materials => [ "Article", "Book", "BookChapter" ],
         },
         SuggestedIssns => {
             type      => "array",
@@ -1287,6 +1299,7 @@ sub fieldmap {
             help      => "Multiple ISSNs must be separated by a space",
             help_msg  => "issn_help",
             materials => [ "Article" ],
+            include_in_metadata => 1,
             required  => {
                 "Article" => {
                     group   => "ARTICLE_IDENTIFIER"
@@ -1299,6 +1312,7 @@ sub fieldmap {
             label_msg => "oclc_accession_number",
             position  => 13,
             materials => [ "Article", "Book", "BookChapter" ],
+            include_in_metadata => 1,
             required  => {
                 "Article" => {
                     group   => "ARTICLE_IDENTIFIER"
@@ -1317,6 +1331,7 @@ sub fieldmap {
             help      => "Multiple ISBNs must be separated by a space",
             help_msg  => "isbn_help",
             materials => [ "Book", "BookChapter" ],
+            include_in_metadata => 1,
             required  => {
                 "Book" => {
                     group   => "BOOK_IDENTIFIER"
@@ -1330,7 +1345,15 @@ sub fieldmap {
             position  => 12,
             help      => "Multiple LCCNs must be separated by a space",
             help_msg  => "lccn_help",
+            include_in_metadata => 1,
             materials => [ "Book", "BookChapter" ]
+        },
+        DOI => {
+            type      => "string",
+            label_msg => "doi_label",
+            position  => 10,
+            include_in_metadata => 0,
+            materials => [ "Article", "BookChapter" ]
         },
         ArticleTitle => {
             type      => "string",
@@ -1345,6 +1368,7 @@ sub fieldmap {
             ill       => "article_title",
             position  => 1,
             materials => [ "Article", "BookChapter" ],
+            include_in_metadata => 1,
             required  => {
                 "Article" => {
                     group   => "ARTICLE_ARTICLE_TITLE_PAGES"
@@ -1368,6 +1392,7 @@ sub fieldmap {
             },
             ill       => "article_author",
             position  => 2,
+            include_in_metadata => 1,
             materials => [ "Article", "Book", "BookChapter" ]
         },
         ArticlePages => {
@@ -1383,6 +1408,7 @@ sub fieldmap {
             ill       => "pages",
             position  => 9,
             materials => [ "Article", "BookChapter" ],
+            include_in_metadata => 1,
             required  => {
                 "Article" => {
                     group   => "ARTICLE_ARTICLE_TITLE_PAGES"
@@ -1406,6 +1432,7 @@ sub fieldmap {
             },
             ill       => "title",
             position  => 0,
+            include_in_metadata => 1,
             materials => [ "Article", "Book", "BookChapter" ]
         },
         PatronJournalYear => {
@@ -1415,6 +1442,7 @@ sub fieldmap {
             ill       => "year",
             position  => 8,
             materials => [ "Article", "Book", "BookChapter" ],
+            include_in_metadata => 1,
             required  => {
                 "Article" => {
                     group   => "ARTICLE_YEAR_VOL"
@@ -1428,6 +1456,7 @@ sub fieldmap {
             ill       => "volume",
             position  => 4,
             materials => [ "Article", "Book", "BookChapter" ],
+            include_in_metadata => 1,
             required  => {
                 "Article" => {
                     group   => "ARTICLE_YEAR_VOL"
@@ -1440,6 +1469,7 @@ sub fieldmap {
             label_msg => "journal_issue_number",
             ill       => "issue",
             position  => 5,
+            include_in_metadata => 1,
             materials => [ "Article" ]
         },
         JournalMonth => {
@@ -1448,6 +1478,7 @@ sub fieldmap {
             position  => 7,
             label     => "Journal month",
             label_msg => "journal_month",
+            include_in_metadata => 1,
             materials => [ "Article" ]
         },
         Edition => {
@@ -1456,6 +1487,7 @@ sub fieldmap {
             label_msg => "book_edition",
             ill       => "part_edition",
             position  => 3,
+            include_in_metadata => 1,
             materials => [ "Book", "BookChapter" ]
         },
         Publisher => {
@@ -1464,6 +1496,7 @@ sub fieldmap {
             label_msg => "book_publisher",
             ill       => "publisher",
             position  => 6,
+            include_in_metadata => 1,
             materials => [ "Book", "BookChapter" ]
         },
         RapidRequestId => {
@@ -1473,6 +1506,7 @@ sub fieldmap {
             label     => "RapidILL identifier",
             label_msg => "rapidill_identifier",
             position  => 99,
+            include_in_metadata => 1,
             materials => [ "Article", "Book", "BookChapter" ]
         }
     };
@@ -1493,34 +1527,44 @@ sub _check_requestability {
     $metadata->{IsHoldingsCheckOnly} = 1;
     $metadata->{DoBlockLocalOnly} = 0;
 
-    die Dumper($metadata);
-
     my $response = $self->{_api}->InsertRequest( $metadata );
+    if ($self->_is_debug) {
+        $self->_debug("check_requestability 1: " . Dumper($response));
+    }
+    if (!($response->{IsSuccessful} && $response->{FoundMatch})) {
+        my $note = $response->{errormsg} ? $response->{errormsg} : join ', ', (split '\n\r?+', $response->{VerificationNote});
 
-    if (exists $response->{parameters}
-        && exists $response->{parameters}->{holdings}
-        && exists $response->{parameters}->{holdings}->{LocalHoldingItem}
-        && @{$response->{parameters}->{holdings}->{LocalHoldingItem}} > 0) {
+        return {
+            requestable => 0,
+            reason => GIVEN_BY_RAPIDILL,
+            note => $note
+        };
+    }
+    if (exists $response->{LocalHoldings}
+        && @{$response->{LocalHoldings}} > 0) {
 
         return {
             requestable => 0,
             reason => LOCALLY_AVAILABLE,
-            holdings => $response->{parameters}->{holdings}
+            holdings => $response->{LocalHoldings}
         };
     }
 
     $metadata->{PatronNotes} = 'HOLDING_CHECK_DO_REMOTE_SEARCH';
     $response = $self->{_api}->InsertRequest( $metadata );
 
-    my $canRequest = $response->{parameters}->{canRequest};
-    my $requestable = $canRequest->{FoundMatch} &&
-        $canRequest->{NumberOfAvailableHoldings} > 0;
+    if ($self->_is_debug) {
+        $self->_debug("check_requestability 2: " . Dumper($response));
+    }
+
+    my $requestable = $response->{IsSuccessful} && $response->{FoundMatch} &&
+        $response->{NumberOfAvailableHoldings} > 0;
 
     if ( $requestable ) {
         return { requestable => 1 };
     }
 
-    my $note = join ', ', (split '\n\r?+', $canRequest->{VerificationNote});
+    my $note = $response->{errormsg} ? $response->{errormsg} : join ', ', (split '\n\r?+', $response->{VerificationNote});
 
     return {
         requestable => 0,
@@ -1565,5 +1609,19 @@ sub _validate_borrower {
     return ( $count, $brw );
 }
 
+sub _log {
+    my $self = shift;
+    return $self->{_kohalogger};
+}
+
+sub _is_debug {
+    my $self = shift;
+    return $self->{_kohalogger}->is_debug;
+}
+
+sub _debug {
+    my $self = shift;
+    return $self->{_kohalogger}->debug(@_);
+}
 
 1;

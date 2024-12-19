@@ -26,6 +26,7 @@
     document.addEventListener('DOMContentLoaded', function(){
         var fieldmap = [% whole.field_map_json %];
         [% INCLUDE "${cwd}/shared-includes/create.js" %]
+        [% INCLUDE "${cwd}/shared-includes/crossref.js" %]
     });
     //]]>
 </script>

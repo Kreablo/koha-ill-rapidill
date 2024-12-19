@@ -40,7 +40,7 @@
 <p>We have now created your request.</p>
 
 [% ELSIF whole.stage == "init" %]
-[% SET active = whole.rapidill_config.enabled_types.0 %]
+[% SET active = whole.value.other.RapidRequestType ? whole.value.other.RapidRequestType : whole.rapidill_config.enabled_types.0 %]
 <ul class="nav nav-tabs" role="tablist" />
    [% IF whole.rapidill_config.enabled_types.grep('^Book$').size() > 0 %]
    <li role="presentation" class="nav-item"><a class="nav-link[% IF active == "Book" %] active[% END %]" href="#type-book" aria-controls="type-book" role="tab" data-toggle="tab">[% MSG.option_book %]</a></li>
@@ -79,6 +79,7 @@
   document.addEventListener('DOMContentLoaded', function(){
     var fieldmap = [% whole.field_map_json %];
     [% INCLUDE "${cwd}/shared-includes/create.js" %]
+    [% INCLUDE "${cwd}/shared-includes/crossref.js" %]
   });
 </script>
 [% END %]

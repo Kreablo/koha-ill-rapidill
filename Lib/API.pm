@@ -25,6 +25,7 @@ use HTTP::Request;
 use JSON qw( encode_json );
 use CGI;
 use URI;
+use Data::Dumper;
 
 use Koha::Logger;
 use C4::Context;
@@ -46,7 +47,8 @@ sub new {
 
     my $self = {
         version => $version,
-        fieldmap => $fieldmap
+        fieldmap => $fieldmap,
+        _kohalogger => Koha::Logger->get({ category => $class })
     };
 
     bless $self, $class;
@@ -61,6 +63,10 @@ Make a call to the RapidILL service api
 
 sub InsertRequest {
     my ($self, $metadata, $borrowernumber) = @_;
+
+    if ($self->_is_debug) {
+        $self->_debug("InsertRequest:" . Dumper($metadata));
+    }
 
     if (defined $borrowernumber) {
         my $borrower = Koha::Patrons->find( $borrowernumber );
@@ -78,11 +84,14 @@ sub InsertRequest {
         $metadata->{PatronEmail} = $borrower->email if $borrower->email;
     }
 
-
     my $input = {
         ClientAppName        => "Koha RapidILL client",
         %{$metadata}
     };
+
+    if ($self->_is_debug) {
+        $self->_debug("InsertRequest input:" . Dumper($input));
+    }
 
     return _instance()->call('InsertRequest', $input, $self->{fieldmap} );
 }
@@ -103,6 +112,10 @@ sub UpdateRequest {
         UpdateAction         => $action,
         %{$metadata}
     };
+
+    if ($self->_is_debug) {
+        $self->_debug("UpdateRequest input:" . Dumper($input));
+    }
 
     return _instance()->call( 'UpdateRequest', $input, $self->{fieldmap} );
 
@@ -156,5 +169,19 @@ sub _instance {
     return $class->new(RAPIDILL_SERVICE_URL, _get_credentials());
 }
 
+sub _log {
+    my $self = shift;
+    return $self->{_kohalogger};
+}
+
+sub _is_debug {
+    my $self = shift;
+    return $self->{_kohalogger}->is_debug;
+}
+
+sub _debug {
+    my $self = shift;
+    return $self->{_kohalogger}->debug(@_);
+}
 
 1;
