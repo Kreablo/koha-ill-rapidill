@@ -101,6 +101,7 @@
  [% IF variant != 'edit' %]
   <fieldset class="form-group">
     <legend>[% MSG.patron_options | html %]</legend>
+    <input type="hidden" value="HV" name="branchcode" />
     <ul class="fields">
       [% IF staff %]
       <li>
@@ -109,18 +110,6 @@
            value="[% whole.value.other.cardnumber %]" />
       </li>
       [% END %]
-      <li>
-        <label for="branchcode">[% MSG.destination_library_label | html %]</label>
-        <select class="form-control" id="branchcode" name="branchcode">
-          [% FOREACH branch IN branches %]
-            [% IF ( whole.value.other.branchcode == branch.branchcode ) %]
-              <option value="[% branch.branchcode %]" selected="selected">[% branch.branchname %]</option>
-            [% ELSE %]
-              <option value="[% branch.branchcode %]">[% branch.branchname %]</option>
-            [% END %]
-          [% END %]
-        </select>
-      </li>
     </ul>
   </fieldset>
   [% END %]
