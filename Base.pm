@@ -1531,7 +1531,7 @@ sub _check_requestability {
     if ($self->_is_debug) {
         $self->_debug("check_requestability 1: " . Dumper($response));
     }
-    if (!($response->{IsSuccessful} && $response->{FoundMatch})) {
+    if (!($response->{FoundMatch} && $response->{NumberOfAvailableHoldings} > 0)) {
         my $note = $response->{errormsg} ? $response->{errormsg} : join ', ', (split '\n\r?+', $response->{VerificationNote});
 
         return {
@@ -1540,13 +1540,13 @@ sub _check_requestability {
             note => $note
         };
     }
-    if (exists $response->{LocalHoldings}
-        && @{$response->{LocalHoldings}} > 0) {
+    if (exists $response->{LocalHoldings} && exists $response->{LocalHoldings}->{LocalHoldingItem} && (ref $response->{LocalHoldings}->{LocalHoldingItem}) eq "ARRAY"
+        && @{$response->{LocalHoldings}->{LocalHoldingItem}} > 0) {
 
         return {
             requestable => 0,
             reason => LOCALLY_AVAILABLE,
-            holdings => $response->{LocalHoldings}
+            holdings => $response->{LocalHoldings}->{LocalHoldingItem}
         };
     }
 
@@ -1557,7 +1557,7 @@ sub _check_requestability {
         $self->_debug("check_requestability 2: " . Dumper($response));
     }
 
-    my $requestable = $response->{IsSuccessful} && $response->{FoundMatch} &&
+    my $requestable = $response->{FoundMatch} &&
         $response->{NumberOfAvailableHoldings} > 0;
 
     if ( $requestable ) {
