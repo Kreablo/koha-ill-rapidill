@@ -92,6 +92,7 @@ sub create {
         status         => "",
         message        => "",
         error          => 0,
+        validation_group_sizes => $self->_validation_group_sizes,
         field_map      => $self->fieldmap_sorted,
         field_map_json => to_json($self->fieldmap()),
         lang_dialect   => $lang,
@@ -158,6 +159,14 @@ sub create {
     # Validate form and perform search if valid
     elsif ( $stage eq 'validate' || $stage eq 'form' ) {
 
+        my $group_validity = $self->_validate_metadata($other);
+        my $all_valid = (grep {!$_} (values %$group_validity)) == 0 ;
+
+        if ($self->_is_debug) {
+            $self->_debug("group_validity: " . Dumper($group_validity));
+            $self->_debug("all_valid: $all_valid");
+        }
+
         if ( _fail( $other->{'branchcode'} ) ) {
             # Pass the map of form fields in forms that can be used by TT
             # and JS
@@ -167,6 +176,7 @@ sub create {
             $response->{error}  = 1;
             $response->{stage}  = 'init';
             $response->{value}  = $params;
+            $response->{group_validity} = $group_validity;
             return $response;
         }
         elsif ( !Koha::Libraries->find( $other->{'branchcode'} ) ) {
@@ -178,9 +188,10 @@ sub create {
             $response->{error}  = 1;
             $response->{stage}  = 'init';
             $response->{value}  = $params;
+            $response->{group_validity} = $group_validity;
             return $response;
         }
-        elsif ( !$self->_validate_metadata($other) ) {
+        elsif ( !$all_valid ) {
 
             if ($other->{opac}) {
                 $response->{field_map} = $self->fieldmap_sorted;
@@ -189,6 +200,7 @@ sub create {
                 $response->{error}  = 1;
                 $response->{stage}  = 'init';
                 $response->{value}  = $params;
+                $response->{group_validity} = $group_validity;
                 return $response;
             } else {
 
@@ -217,6 +229,7 @@ sub create {
                     $response->{rapidill_reason} = $requestability->{reason};
                     $response->{rapidill_note} = $requestability->{note} if exists $requestability->{note};
                     $response->{rapidill_holdings} = $requestability->{holdings} if exists $requestability->{holdings};
+                    $response->{group_validity} = $group_validity;
                     return $response;
                 }
             }
@@ -597,14 +610,28 @@ sub _validate_metadata {
     my $type = $metadata->{RapidRequestType};
     my $groups = $self->_build_validation_groups($type);
 
+    my %group_validity = ();
+
     foreach my $group(keys %{$groups}) {
         my $group_fields = $groups->{$group};
-        if (!_is_group_valid($metadata, $group_fields)) {
-            return 0;
-        }
+        $group_validity{$group} = _is_group_valid($metadata, $group_fields);
     }
 
-    return 1;
+    return \%group_validity;
+}
+
+sub _validation_group_sizes {
+    my ($self) = @_;
+
+    my %res = ();
+
+    for my $type ('Article', 'Book', 'BookChapter') {
+        my $groups = $self->_build_validation_groups($type);
+
+        $res{$type} = { map { ($_ => scalar(@{$groups->{$_}})) } (keys %$groups)};
+    }
+
+    return \%res;
 }
 
 =head3 _build_validation_groups
@@ -1302,7 +1329,9 @@ sub fieldmap {
             include_in_metadata => 1,
             required  => {
                 "Article" => {
-                    group   => "ARTICLE_IDENTIFIER"
+                    group   => "ARTICLE_IDENTIFIER",
+                    valid_msg => "ok",
+                    invalid_msg => "an_article_identifier_required"
                 }
             }
         },
@@ -1315,11 +1344,13 @@ sub fieldmap {
             include_in_metadata => 1,
             required  => {
                 "Article" => {
-                    group   => "ARTICLE_IDENTIFIER"
+                    group   => "ARTICLE_IDENTIFIER",
+                    invalid_msg => "an_article_identifier_required"
                 },
                 "Book" => {
-                    group   => "BOOK_IDENTIFIER"
-                }
+                    group   => "BOOK_IDENTIFIER",
+                    invalid_msg => "a_book_identifier_required"
+                 }
             }
         },
         SuggestedIsbns => {
@@ -1334,7 +1365,9 @@ sub fieldmap {
             include_in_metadata => 1,
             required  => {
                 "Book" => {
-                    group   => "BOOK_IDENTIFIER"
+                    group   => "BOOK_IDENTIFIER",
+                    valid_msg => "ok",
+                    invalid_msg => "a_book_identifier_required"
                 }
             }
         },
@@ -1371,10 +1404,12 @@ sub fieldmap {
             include_in_metadata => 1,
             required  => {
                 "Article" => {
-                    group   => "ARTICLE_ARTICLE_TITLE_PAGES"
+                    group   => "ARTICLE_ARTICLE_TITLE_PAGES",
+                    invalid_msg => "invalid_required_article_article_title_pages"
                 },
                 "BookChapter" => {
-                    group   => "CHAPTER_ARTICLE_TITLE_PAGES"
+                    group   => "CHAPTER_ARTICLE_TITLE_PAGES",
+                    invalid_msg => "invalid_required_chapter_article_title_pages"
                 }
             }
         },
@@ -1411,10 +1446,12 @@ sub fieldmap {
             include_in_metadata => 1,
             required  => {
                 "Article" => {
-                    group   => "ARTICLE_ARTICLE_TITLE_PAGES"
+                    group   => "ARTICLE_ARTICLE_TITLE_PAGES",
+                    invalid_msg => "invalid_required_article_article_title_pages"
                 },
                 "BookChapter" => {
-                    group   => "CHAPTER_ARTICLE_TITLE_PAGES"
+                    group   => "CHAPTER_ARTICLE_TITLE_PAGES",
+                    invalid_msg => "invalid_required_chapter_article_title_pages"
                 }
             }
         },
@@ -1428,12 +1465,12 @@ sub fieldmap {
             label_msg_variants => {
                 Article     => "journal_title",
                 Book        => "book_title",
-                BookChapter => "book_chapter_title"
+                BookChapter => "book_title"
             },
             ill       => "title",
             position  => 1,
             include_in_metadata => 1,
-            materials => [ "Article", "Book", "BookChapter" ]
+            materials => [ "Article", "Book", "BookChapter" ],
         },
         PatronJournalYear => {
             type      => "string",
@@ -1445,7 +1482,8 @@ sub fieldmap {
             include_in_metadata => 1,
             required  => {
                 "Article" => {
-                    group   => "ARTICLE_YEAR_VOL"
+                    group   => "ARTICLE_YEAR_VOL",
+                    invalid_msg => "invalid_required_year_vol"
                 }
             }
         },
@@ -1459,7 +1497,8 @@ sub fieldmap {
             include_in_metadata => 1,
             required  => {
                 "Article" => {
-                    group   => "ARTICLE_YEAR_VOL"
+                    group   => "ARTICLE_YEAR_VOL",
+                    invalid_msg => "invalid_required_year_vol"
                 }
             }
         },

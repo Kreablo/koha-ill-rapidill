@@ -14,7 +14,7 @@
     cardnumber_username_or_surname = "Card number, username or surname:",
     created_request_confirm = "We have now created your request.",
     destination_library_label = "Destination library:",
-    doi_label = "DOI:",
+    doi_label = "DOI",
     edit_metadata = "Edit metadata",
     edit_request = "Edit request",
     enter_metadata = "Enter metadata",
@@ -53,5 +53,10 @@
     update = "Update",
     volume_number = "Volume number",
     year_of_publication = "Four digit year of publication",
-    you_must_complete_fields = "You must complete at least one of the following fields:"
+    you_must_complete_fields = "You must complete at least one of the following fields:",
+    an_article_identifier_required = "An article identifier is required",
+    a_book_identifier_required = "A book identifier is required",
+    invalid_required_article_article_title_pages = "Either article title or pages must be specified",
+    invalid_required_chapter_article_title_pages = "Either chapter title or pages must be specified",
+    invalid_required_year_vol = "Either year or volume must be specified"
 } %]

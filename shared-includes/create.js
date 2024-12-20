@@ -31,9 +31,34 @@ function isGroupValid(fields, inputs) {
 // Validate fields and display warnings
 function validateFields(form, type) {
     const inputs = new Map();
+    const filledgroups = new Map();
     for (const input of form.getElementsByTagName('input')) {
         const name = input.getAttribute('name');
         inputs.set(name, input);
+        const groupattr = input.attributes.getNamedItem('data-validation-group');
+        if (groupattr !== null) {
+            const groupname = groupattr.value;
+            if (input.value.match(/[^ ]/)) {
+                filledgroups.set(groupname, name);
+            }
+        }
+    }
+    for (const input of inputs.values()) {
+        const groupattr = input.attributes.getNamedItem('data-validation-group');
+        if (groupattr !== null) {
+            const groupname = groupattr.value;
+            if (filledgroups.has(groupname)) {
+                input.classList.remove("is-invalid");
+                input.classList.remove("has-errors");
+                input.classList.add("is-valid");
+                input.setCustomValidity("");
+            } else {
+                input.classList.add("is-invalid");
+                input.classList.add("has-errors");
+                input.classList.remove("is-valid");
+                input.setCustomValidity("x");
+            }
+        }
     }
     // Get our validation groups
     const messages = [];
@@ -65,7 +90,7 @@ function validateFields(form, type) {
     return messages;
 };
 
-let hasValidate = false;
+let hasValidated = new Set();
 
 const doSubmit = (event, form, formId, type) => {
     const messages = validateFields(form, type);
@@ -74,22 +99,13 @@ const doSubmit = (event, form, formId, type) => {
         c.remove();
     }
     if (messages.length > 0) {
-        hasValidated = true;
+        if (!hasValidated.has(type)) {
+            hasValidated.add(type);
+            form.classList.add("was-validated");
+            form.addEventListener('change', () => validateFields(form, type));
+        }
         event.preventDefault();
         event.stopPropagation();
-        const hb = document.createElement("div");
-        hb.classList.add("has-error");
-        hb.classList.add("has-feedback");
-        hb.classList.add("text-danger");
-        const ul = document.createElement("ul");
-        ul.classList.add("help-block");
-        hb.append(ul);
-        container.append(hb);
-        for (const message of messages) {
-            const li = document.createElement("li");
-            li.append(message);
-            ul.append(li);
-        }
     }
 };
 

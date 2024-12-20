@@ -73,9 +73,19 @@
   ul.fields li {
     list-style-type: none;
   }
-  #Article_SuggestedLccns_field,   #Book_SuggestedLccns_field,   #BookChapter_SuggestedLccns_field,
-  #Article_OclcNumber_field, #Book_OclcNumber_field, #BookChapter_OclcNumber_field {
-     display: none;
+  .soft-required label::after, .hard-required label::after {
+     display: inline-block;
+     position: relative;
+     left: 0.3rem;
+     width: 0;
+     font-size: 65%;
+     top: -0.15rem;
+  }
+  .soft-required label::after {
+     content: '◍';
+  }
+  .hard-required label::after {
+     content: '●';
   }
 </style>
 [% BLOCK backend_jsinclude %]

@@ -20,17 +20,27 @@
         [% END %]
       [% END %]
       [% IF included_material && !field.exclude %]
-      <li id="[% prefix %]_field">
+      [% SET validation_group = field.required && field.required.$rapid_request_type ? field.required && field.required.$rapid_request_type : 0 %]
+      <li id="[% prefix %]_field"[% IF validation_group %] class="[% IF validation_group.group %][% IF whole.validation_group_sizes.${rapid_request_type}.${validation_group.group} == 1 %]hard-required[% ELSE %]soft-required[% END %][% END %]"[% END %]>
         <label id="[% prefix %]label" for="[% key %]">[% IF field.label_msg_variants %][% MSG.${field.label_msg_variants.$rapid_request_type} | html %][% ELSE %][% MSG.${field.label_msg} | html %][% END %]</label>
-        [% SET validation_group = $field.required && $field.required.$rapid_request_type ? $field.required && $field.required.$rapid_request_type.group : 0 %]
-        <input type="text" name="[% key %]" class="form-control[% IF $field_errors.$key %] has-error[% END %]"
+        <input type="text" name="[% key %]" class="form-control [% IF whole.group_validity.exists(validation_group.group) %][% IF  whole.group_validity.${validation_group.group} %]is-valid[% ELSE %]is-invalid has-errors[% END %][% END %]"
                id="[% rapid_request_type %]_[% key %]_input"
                value="[% value | html %]"
                [% IF field.help_msg %]aria-describedby="[% prefix %]helpBlock"[% END %]
-               [% IF validation_group %]data-validation-group="[% validation_group %]"[% END %]
+               [% IF validation_group.group %]data-validation-group="[% validation_group.group %]"[% END %]
                 />
+        [% IF validation_group.valid_msg %]
+        <div class="valid-feedback">
+          [% MSG.${validation_group.valid_msg} | html %]
+        </div>
+        [% END %]
+        [% IF validation_group.invalid_msg %]
+        <div class="invalid-feedback">
+          [% MSG.${validation_group.invalid_msg} | html %]
+        </div>
+        [% END %]
         [% IF field.help %]
-        <span id="[% prefix %]helpBlock" class="help-block">[% MSG.${field.help_msg} | html %]</span>
+        <div id="[% prefix %]helpBlock" class="help-block">[% MSG.${field.help_msg} | html %]</div>
         [% END %]
       </li>
       [% END %]
