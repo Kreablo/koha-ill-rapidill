@@ -53,5 +53,5 @@
     update = "Uppdatera",
     volume_number = "Volymnummer",
     year_of_publication = "Fyrsiffrigt publiceringsår",
-    you_must_complete_fields = "Följande fält måste fyllas i:",
+    you_must_complete_fields = "Minst ett av följande fält måste fyllas i:",
 } %]

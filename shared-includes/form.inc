@@ -79,6 +79,7 @@
 <form method="POST" action="[% here %]" id="[% rapid_request_type %]_[% variant %]_form">
   <fieldset class="form-group">
     <legend>[% MSG.enter_metadata | html %]</legend>
+    <input type="hidden" value="HV" name="branchcode" />
     [% IF variant == "create" %]
     <input name="stage" value="validate" type="hidden"/>
     <input name="method" value="create" type="hidden"/>
@@ -98,18 +99,15 @@
     [% PROCESS render_errors errors=errors %]
     </div>
   </fieldset>
- [% IF variant != 'edit' %]
+ [% IF variant != 'edit' && staff %]
   <fieldset class="form-group">
     <legend>[% MSG.patron_options | html %]</legend>
-    <input type="hidden" value="HV" name="branchcode" />
     <ul class="fields">
-      [% IF staff %]
       <li>
         <label for="cardnumber">[% MSG.cardnumber_username_or_surname | html %]</label>
         <input class="form-control" type="text" required="required" autocomplete="off" name="cardnumber" id="cardnumber" type="text"
            value="[% whole.value.other.cardnumber %]" />
       </li>
-      [% END %]
     </ul>
   </fieldset>
   [% END %]

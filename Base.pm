@@ -1295,7 +1295,7 @@ sub fieldmap {
             label     => "ISSN",
             label_msg => "issn",
             ill       => "issn",
-            position  => 11,
+            position  => 12,
             help      => "Multiple ISSNs must be separated by a space",
             help_msg  => "issn_help",
             materials => [ "Article" ],
@@ -1310,7 +1310,7 @@ sub fieldmap {
             type      => "string",
             label     => "OCLC Accession number",
             label_msg => "oclc_accession_number",
-            position  => 13,
+            position  => 14,
             materials => [ "Article", "Book", "BookChapter" ],
             include_in_metadata => 1,
             required  => {
@@ -1327,7 +1327,7 @@ sub fieldmap {
             label     => "ISBN",
             label_msg => "isbn",
             ill       => "isbn",
-            position  => 10,
+            position  => 11,
             help      => "Multiple ISBNs must be separated by a space",
             help_msg  => "isbn_help",
             materials => [ "Book", "BookChapter" ],
@@ -1366,7 +1366,7 @@ sub fieldmap {
                 BookChapter => "book_chapter_title"
             },
             ill       => "article_title",
-            position  => 1,
+            position  => 2,
             materials => [ "Article", "BookChapter" ],
             include_in_metadata => 1,
             required  => {
@@ -1391,7 +1391,7 @@ sub fieldmap {
                 BookChapter => "book_chapter_author"
             },
             ill       => "article_author",
-            position  => 2,
+            position  => 3,
             include_in_metadata => 1,
             materials => [ "Article", "Book", "BookChapter" ]
         },
@@ -1406,7 +1406,7 @@ sub fieldmap {
                 BookChapter => "pages_in_book_extract"
             },
             ill       => "pages",
-            position  => 9,
+            position  => 10,
             materials => [ "Article", "BookChapter" ],
             include_in_metadata => 1,
             required  => {
@@ -1431,7 +1431,7 @@ sub fieldmap {
                 BookChapter => "book_chapter_title"
             },
             ill       => "title",
-            position  => 0,
+            position  => 1,
             include_in_metadata => 1,
             materials => [ "Article", "Book", "BookChapter" ]
         },
@@ -1440,7 +1440,7 @@ sub fieldmap {
             label     => "Four digit year of publication",
             label_msg => "year_of_publication",
             ill       => "year",
-            position  => 8,
+            position  => 9,
             materials => [ "Article", "Book", "BookChapter" ],
             include_in_metadata => 1,
             required  => {
@@ -1454,7 +1454,7 @@ sub fieldmap {
             label     => "Volume number",
             label_msg => "volume_number",
             ill       => "volume",
-            position  => 4,
+            position  => 5,
             materials => [ "Article", "Book", "BookChapter" ],
             include_in_metadata => 1,
             required  => {
@@ -1468,14 +1468,14 @@ sub fieldmap {
             label     => "Journal issue number",
             label_msg => "journal_issue_number",
             ill       => "issue",
-            position  => 5,
+            position  => 6,
             include_in_metadata => 1,
             materials => [ "Article" ]
         },
         JournalMonth => {
             type      => "string",
             ill       => "item_date",
-            position  => 7,
+            position  => 8,
             label     => "Journal month",
             label_msg => "journal_month",
             include_in_metadata => 1,
@@ -1486,7 +1486,7 @@ sub fieldmap {
             label     => "Book edition",
             label_msg => "book_edition",
             ill       => "part_edition",
-            position  => 3,
+            position  => 4,
             include_in_metadata => 1,
             materials => [ "Book", "BookChapter" ]
         },
@@ -1495,7 +1495,7 @@ sub fieldmap {
             label     => "Book publisher",
             label_msg => "book_publisher",
             ill       => "publisher",
-            position  => 6,
+            position  => 7,
             include_in_metadata => 1,
             materials => [ "Book", "BookChapter" ]
         },

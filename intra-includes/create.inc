@@ -61,6 +61,10 @@
   ul.fields li {
     list-style-type: none;
   }
+  #Article_SuggestedLccns_field,   #Book_SuggestedLccns_field,   #BookChapter_SuggestedLccns_field,
+  #Article_OclcNumber_field, #Book_OclcNumber_field, #BookChapter_OclcNumber_field {
+     display: none;
+  }
 </style>
 [% BLOCK backend_jsinclude %]
 <script>
