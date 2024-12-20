@@ -14,7 +14,7 @@
     cardnumber_username_or_surname = "Kortnummer, låntagarnummer eller efternamn:",
     created_request_confirm = "Fjärrlånebegäran är genomförd.",
     destination_library_label = "Målbibliotek:",
-    doi_label = "DOI:",
+    doi_label = "DOI",
     edit_metadata = "Redigera metadata",
     edit_request = "Redigera begäran",
     enter_metadata = "Ange metadata",
@@ -54,4 +54,9 @@
     volume_number = "Volymnummer",
     year_of_publication = "Fyrsiffrigt publiceringsår",
     you_must_complete_fields = "Minst ett av följande fält måste fyllas i:",
+    an_article_identifier_required = "Ett standardnummer för att identifiera artikeln måste anges",
+    a_book_identifier_required = "Ett standardnummer för att identifiera bok måste anges",
+    invalid_required_article_article_title_pages = "Antingen artikeltitel eller sidnummer måste anges",
+    invalid_required_chapter_article_title_pages = "Antingen kapitlets titel eller sidnummer måste anges",
+    invalid_required_year_vol = "Antingen årtal eller volym måste anges"
 } %]
