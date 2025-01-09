@@ -1335,24 +1335,6 @@ sub fieldmap {
                 }
             }
         },
-        OclcNumber => {
-            type      => "string",
-            label     => "OCLC Accession number",
-            label_msg => "oclc_accession_number",
-            position  => 14,
-            materials => [ "Article", "Book", "BookChapter" ],
-            include_in_metadata => 1,
-            required  => {
-                "Article" => {
-                    group   => "ARTICLE_IDENTIFIER",
-                    invalid_msg => "an_article_identifier_required"
-                },
-                "Book" => {
-                    group   => "BOOK_IDENTIFIER",
-                    invalid_msg => "a_book_identifier_required"
-                 }
-            }
-        },
         SuggestedIsbns => {
             type      => "array",
             label     => "ISBN",
