@@ -47,6 +47,8 @@
     pages_in_journal = "Sidor",
     patron_options = "Låntagaruppgifter",
     rapidill_identifier = "RapidILL-identifierare",
+    request_books = "Beställ böcker från andra bibliotek i formuläret på <a href=\"https://bibliotek.hv.se/lana/finns-inte-materialet/#form2\">https://bibliotek.hv.se/lana/finns-inte-materialet/#form2</a>",
+    request_failure_alternative = "Om artikel inte går att beställa här (eller om det är en bok) använd formuläret på <a href=\"https://bibliotek.hv.se/lana/finns-inte-materialet/#form2\">https://bibliotek.hv.se/lana/finns-inte-materialet/#form2</a>",
     service_error = "<em>Notera:</em> fel uppstod vid kommunikationen med fjärrlånesystemet.",
     type_label = "Typ:",
     unhandled_error = "Ej hanterat fel",

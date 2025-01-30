@@ -47,6 +47,8 @@
     pages_in_journal = "Pages",
     patron_options = "Patron options",
     rapidill_identifier = "RapidILL identifier",
+    request_books = "Request books from other libraries on <a href=\"https://bibliotek.hv.se/en/borrow/cant-find-what-youre-looking-for/\">https://bibliotek.hv.se/en/borrow/cant-find-what-youre-looking-for/</a>",
+    request_failure_alternative = "If the item cannot be requested here (or is a book), use the form on <a href=\"https://bibliotek.hv.se/en/borrow/cant-find-what-youre-looking-for/\">https://bibliotek.hv.se/en/borrow/cant-find-what-youre-looking-for/</a>",
     service_error = "<em>Please Note:</em> there was an error whilst communicating with the remote service.",
     type_label = "Type:",
     unhandled_error = "Unhandled error",

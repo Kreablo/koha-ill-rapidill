@@ -47,7 +47,7 @@
 [% END %]
 [% BLOCK render_errors %]
   [% IF errors || whole.error %]
-  <div class="help-block has-error">
+  <div class="help-block has-error alert alert-danger" role="alert">
   <ul>
     [% IF whole.error %]
       [% IF whole.status == 'missing_fields' %]
@@ -76,6 +76,10 @@
       <li>[% error | html %]</li>
     [% END %]
   </ul>
+
+  </div>
+  <div class="alert alert-info" role="alert">
+    <p><i class="fa-icon fa-circle-info fa-solid fa-lg"></i> [% MSG.request_failure_alternative %]</p>
   </div>
   [% END %]
 [% END %]

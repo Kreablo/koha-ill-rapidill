@@ -30,16 +30,23 @@
   [% ELSIF whole.status == 'api' %]
     <p><em>Please Note:</em> there was an error whilst communicating with the remote service.</p>
   [% ELSIF whole.message %]
-    <p><em>[% whole.message %]</em></p>
+    <p><em>[% whole.message | html %]</em></p>
   [% ELSE %]
     <p><em>Unhandled error</em></p>
   [% END %]
+  <p><i class="fa-icon fa-circle-info fa-solid fa-lg"></i> [% MSG.request_failure_alternative %]</p>
 [% END %]
 
 [% IF whole.stage == "commit" %]
+<div class="alert alert-success" role="alert">
 <p>We have now created your request.</p>
+</div>
 
 [% ELSIF whole.stage == "init" %]
+<div class="alert alert-info" role="alert">
+<p><i class="fa-icon fa-book fa-solid fa-lg"></i> [% MSG.request_books %]</p>
+</div>
+
 [% SET active = whole.value.other.RapidRequestType ? whole.value.other.RapidRequestType : whole.rapidill_config.enabled_types.0 %]
 <ul class="nav nav-tabs" role="tablist" />
    [% IF whole.rapidill_config.enabled_types.grep('^Book$').size() > 0 %]
