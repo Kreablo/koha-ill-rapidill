@@ -1214,7 +1214,8 @@ sub _openurl_to_ill {
         aulast  => 'ArticleAuthor',
         pages   => 'ArticlePages',
         ctitle  => 'ArticleTitle',
-        clast   => 'ArticleAuthor'
+        clast   => 'ArticleAuthor',
+        doi     => 'DOI'
     };
 
     my $transform_value = {
@@ -1223,7 +1224,9 @@ sub _openurl_to_ill {
             selectedft => 'Article',
             print      => 'Book',
             ebook      => 'Book',
-            journal    => 'Article'
+            journal    => 'Article',
+            dissertation => 'Article',
+            bookitem   => 'BookChapter'
         }
     };
 
@@ -1347,6 +1350,11 @@ sub fieldmap {
             include_in_metadata => 1,
             required  => {
                 "Book" => {
+                    group   => "BOOK_IDENTIFIER",
+                    valid_msg => "ok",
+                    invalid_msg => "a_book_identifier_required"
+                },
+                "BookChapter" => {
                     group   => "BOOK_IDENTIFIER",
                     valid_msg => "ok",
                     invalid_msg => "a_book_identifier_required"
@@ -1552,16 +1560,7 @@ sub _check_requestability {
     if ($self->_is_debug) {
         $self->_debug("check_requestability 1: " . Dumper($response));
     }
-    if (!($response->{FoundMatch} && $response->{NumberOfAvailableHoldings} > 0)) {
-        my $note = $response->{errormsg} ? $response->{errormsg} : join ', ', (split '\n\r?+', $response->{VerificationNote});
-
-        return {
-            requestable => 0,
-            reason => GIVEN_BY_RAPIDILL,
-            note => $note
-        };
-    }
-    if (exists $response->{LocalHoldings} && exists $response->{LocalHoldings}->{LocalHoldingItem} && (ref $response->{LocalHoldings}->{LocalHoldingItem}) eq "ARRAY"
+    if ($response->{FoundMatch} && exists $response->{LocalHoldings} && ref $response->{LocalHoldings} eq "HASH" && exists $response->{LocalHoldings}->{LocalHoldingItem} && (ref $response->{LocalHoldings}->{LocalHoldingItem}) eq "ARRAY"
         && @{$response->{LocalHoldings}->{LocalHoldingItem}} > 0) {
 
         return {

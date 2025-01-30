@@ -70,10 +70,10 @@
      top: -0.15rem;
   }
   .soft-required label::after {
-     content: '◍';
+     content: '⬤';
   }
   .hard-required label::after {
-     content: '●';
+     content: '⬤';
   }
   .invalid-feedback {
      color: #a94442;
@@ -93,7 +93,6 @@
 <script>
   // Require a username and branch selection
   document.addEventListener('DOMContentLoaded', function(){
-
 
       var fieldmap = [% whole.field_map_json %];
 

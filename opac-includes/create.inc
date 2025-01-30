@@ -82,15 +82,27 @@
      top: -0.15rem;
   }
   .soft-required label::after {
-     content: '◍';
+     content: '⬤';
   }
   .hard-required label::after {
-     content: '●';
+     content: '⬤';
   }
 </style>
 [% BLOCK backend_jsinclude %]
 <script>
+
   document.addEventListener('DOMContentLoaded', function(){
+      /* Workaround for https://bugs.koha-community.org/bugzilla3/show_bug.cgi?id=36273 */
+      for (const form of document.getElementsByTagName('form')) {
+         console.log("action: " + form.getAttribute('action'))
+         if (form.getAttribute('action') === "") {
+            const action = new URL(window.location.href);
+            action.search = "";
+            form.setAttribute("action", action.href);
+         }
+      }
+
+
     var fieldmap = [% whole.field_map_json %];
     [% INCLUDE "${cwd}/shared-includes/create.js" %]
     [% INCLUDE "${cwd}/shared-includes/crossref.js" %]

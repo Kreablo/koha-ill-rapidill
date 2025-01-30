@@ -32,7 +32,7 @@ sub call {
             $type = "rapid5api:RequestType"
         }
         if (!defined $type) {
-            if ($name eq "ClientAppName") {
+            if ($name eq "ClientAppName" || $name eq "PatronNotes") {
                 $type = "string";
             } elsif (exists $self->{credentials}->{$name}) {
                 $type = "string";
@@ -79,6 +79,9 @@ sub call {
     $result->{IsSuccessful} = 0 if $result->{IsSuccessful} eq 'false';
     $result->{FoundMatch} = 0 if $result->{FoundMatch} eq 'false';
     $result->{IsLocalHolding} = 0 if $result->{IsLocalHolding} eq 'false';
+    if (exists $response->{LocalHoldings} && exists $response->{LocalHoldings}->{LocalHoldingItem} && (ref $response->{LocalHoldings}->{LocalHoldingItem}) eq "HASH") {
+        $response->{LocalHoldings}->{LocalHoldingItem} = [$response->{LocalHoldings}->{LocalHoldingItem}];
+    }
 
     return $resp->result;
  }
