@@ -79,11 +79,11 @@ sub call {
     $result->{IsSuccessful} = 0 if $result->{IsSuccessful} eq 'false';
     $result->{FoundMatch} = 0 if $result->{FoundMatch} eq 'false';
     $result->{IsLocalHolding} = 0 if $result->{IsLocalHolding} eq 'false';
-    if (exists $response->{LocalHoldings} && exists $response->{LocalHoldings}->{LocalHoldingItem} && (ref $response->{LocalHoldings}->{LocalHoldingItem}) eq "HASH") {
-        $response->{LocalHoldings}->{LocalHoldingItem} = [$response->{LocalHoldings}->{LocalHoldingItem}];
+    if (exists $result->{LocalHoldings} && exists $result->{LocalHoldings}->{LocalHoldingItem} && (ref $result->{LocalHoldings}->{LocalHoldingItem}) eq "HASH") {
+        $result->{LocalHoldings}->{LocalHoldingItem} = [$result->{LocalHoldings}->{LocalHoldingItem}];
     }
 
-    return $resp->result;
+    return $result;
  }
 
 sub _log {

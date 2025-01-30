@@ -278,14 +278,13 @@ sub cancel {
     }
 
     # This submission was submitted to Rapid, so we can try to cancel it there
-    my $response = $self->{_api}->UpdateRequest(
+    my $result = $self->{_api}->UpdateRequest(
         $rapid_request_id->value,
         "Cancel"
     );
 
     # If the cancellation was successful, note that in Staff notes
-    my $body = from_json($response->decoded_content);
-    if ($response->is_success && $body->{result}->{IsSuccessful}) {
+    if ($result->{IsSuccessful}) {
         $params->{request}->notesstaff(
             join("\n\n", ($params->{request}->notesstaff || "", "Cancelled with RapidILL"))
         )->store;
@@ -299,7 +298,7 @@ sub cancel {
     # The call to RapidILL failed for some reason. Add the message we got back from the API
     # to the submission's Staff Notes
     $params->{request}->notesstaff(
-        join("\n\n", ($params->{request}->notesstaff || "", "RapidILL request cancellation failed:\n" . $body->{result}->{VerificationNote} || ""))
+        join("\n\n", ($params->{request}->notesstaff || "", "RapidILL request cancellation failed:\n" . $result->{VerificationNote} || ""))
     )->store;
     # Return the message
     return {
@@ -307,7 +306,7 @@ sub cancel {
         method  => "cancel",
         stage   => "init",
         error   => 1,
-        message => $body->{result}->{VerificationNote}
+        message => $result->{VerificationNote}
     };
 }
 
@@ -862,39 +861,36 @@ sub create_request {
     );
 
     # Make the request with RapidILL via the koha-plugin-rapidill API
-    my $response = $self->{_api}->InsertRequest( $metadata, $submission->borrowernumber );
+    my $result = $self->{_api}->InsertRequest( $metadata, $submission->borrowernumber );
     my $error = 0;
 
     # If the call to RapidILL was successful,
     # add the Rapid request ID to our submission's metadata
-    if ($response->is_success) {
-        my $body = { result => $response->decoded_content };
-        if ($body->{result}->{IsSuccessful}) {
-            my $rapid_id = $body->{result}->{RapidRequestId};
-            if ($rapid_id && length $rapid_id > 0) {
-                Koha::ILL::Request::Attribute->new({
-                    illrequest_id => $submission->illrequest_id,
-                    # Check required for compatibility with installations before bug 33970
-                    column_exists( 'illrequestattributes', 'backend' ) ? (backend =>"RapidILL") : (),
-                    type          => 'RapidRequestId',
-                    value         => $rapid_id
-                                                   })->store;
-            }
-            # Add the RapidILL ID to the orderid field
-            $submission->orderid($rapid_id);
-            # Update the submission status
-            $submission->status('REQ')->store;
-
-            # Log the outcome
-            $self->log_request_outcome({
-                outcome => 'RAPIDILL_REQUEST_SUCCEEDED',
-                request => $submission
-                                       });
-
-            return { success => 1 };
-        } else {
-            $error = $body->{result}->{errormsg} ? $body->{result}->{errormsg} : $body->{result}->{VerificationNote};
+    if ($result->{IsSuccessful}) {
+        my $rapid_id = $result->{RapidRequestId};
+        if ($rapid_id && length $rapid_id > 0) {
+            Koha::ILL::Request::Attribute->new({
+                illrequest_id => $submission->illrequest_id,
+                # Check required for compatibility with installations before bug 33970
+                column_exists( 'illrequestattributes', 'backend' ) ? (backend =>"RapidILL") : (),
+                type          => 'RapidRequestId',
+                value         => $rapid_id
+                                               })->store;
         }
+        # Add the RapidILL ID to the orderid field
+        $submission->orderid($rapid_id);
+        # Update the submission status
+        $submission->status('REQ')->store;
+
+        # Log the outcome
+        $self->log_request_outcome({
+            outcome => 'RAPIDILL_REQUEST_SUCCEEDED',
+            request => $submission
+                                   });
+
+        return { success => 1 };
+    } else {
+        $error = $result->{errormsg} ? $result->{errormsg} : $result->{VerificationNote};
     }
 
     # The call to RapidILL failed for some reason. Add the message we got back from the API
