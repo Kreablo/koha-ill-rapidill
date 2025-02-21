@@ -90,17 +90,17 @@
 [% PROCESS render_form_variant variant='edit' %]
 [% END %]
 [% BLOCK render_form_variant %]
-<form method="POST" action="[% here %]" id="[% rapid_request_type %]_[% variant %]_form">
+<form method="POST" action="[% action_url %]" id="[% rapid_request_type %]_[% variant %]_form">
   <fieldset class="form-group">
     <legend>[% MSG.enter_metadata | html %]</legend>
     <input type="hidden" value="HV" name="branchcode" />
+    <input type="hidden" name="illrequest_id" value="[% illrequest_id %]" />
     [% IF variant == "create" %]
     <input name="stage" value="validate" type="hidden"/>
-    <input name="method" value="create" type="hidden"/>
     [% ELSE %]
     <input name="stage" value="form" type="hidden"/>
-    <input name="method" value="edititem" type="hidden"/>
     [% END %]
+    <input name="op" value="[% cud_op %]" type="hidden"/>
     <input name="RapidRequestType" value="[% rapid_request_type %]" type="hidden" />
     <input name="backend" value="RapidILL" type="hidden"/>
     [% IF Koha.Version.major >= 24 %][% INCLUDE 'csrf-token.inc' %][% END %]

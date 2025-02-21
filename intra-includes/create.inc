@@ -18,6 +18,8 @@
 [% PROCESS "${cwd}/shared-includes/form.inc" %]
 [% SET staff = 1 %]
 [% SET requests_back_url = '/cgi-bin/koha/ill/ill-requests.pl' %]
+[% SET action_url = '/cgi-bin/koha/ill/ill-requests.pl' %]
+[% SET cud_op = 'cud-create' %]
 
 [% PROCESS render_errors %]
 

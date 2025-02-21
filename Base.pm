@@ -20,6 +20,7 @@ package Koha::Illbackends::RapidILL::Base;
 use Modern::Perl;
 use strict;
 use warnings;
+use CGI;
 
 use JSON qw( to_json from_json );
 use File::Basename qw( dirname );
@@ -33,6 +34,7 @@ use C4::Languages;
 use C4::Context;
 use Koha::Illbackends::RapidILL::Lib::Config qw( config );
 use Data::Dumper;
+use utf8;
 
 our $VERSION = "1.0.0";
 
@@ -97,7 +99,7 @@ sub create {
         field_map_json => to_json($self->fieldmap()),
         lang_dialect   => $lang,
         lang_all       => $lang_split[0],
-        rapidill_config => $self->{_config}
+        rapidill_config => $self->{_config},
     };
 
     # Check for borrowernumber, but only if we're not receiving an OpenURL
@@ -802,17 +804,7 @@ sub prep_submission_metadata {
             $metadata_hashref->{$field} &&
             length $metadata_hashref->{$field} > 0
         ) {
-            # "array" fields need splitting by space and forming into an array
-            if ($fields->{$field}->{type} eq 'array') {
-                $metadata_hashref->{$field}=~s/^ *//;
-                $metadata_hashref->{$field}=~s/ *$//;
-                my @arr = split(/ +/, $metadata_hashref->{$field});
-                # Needs to be in the form
-                # SuggestedIsbns => { string => [ "1234567890", "0987654321" ] }
-                $return->{$field} = { string => \@arr };
-            } else {
-                $return->{$field} = $metadata_hashref->{$field};
-            }
+            $return->{$field} = $metadata_hashref->{$field};
         }
     }
 
@@ -834,7 +826,7 @@ sub submit_and_request {
 
     if (C4::Context->preference('ILLModuleUnmediated')) {
     # Now use the submission to try and create a request with Rapid
-        return $self->create_request($submission);
+        return $self->confirm({ request => $submission });
     } else {
         return { success => 1 };
     }
@@ -1062,6 +1054,8 @@ sub capabilities {
         illview => sub { illview(@_); },
         # Migrate
         migrate => sub { $self->migrate(@_); },
+
+        edititem => sub { edititem(@_); },
 
         # Return whether we can create the request
         # i.e. the create form has been submitted
@@ -1357,16 +1351,6 @@ sub fieldmap {
                 }
             }
         },
-        SuggestedLccns => {
-            type      => "array",
-            label     => "LCCN",
-            label_msg => "lccn",
-            position  => 12,
-            help      => "Multiple LCCNs must be separated by a space",
-            help_msg  => "lccn_help",
-            include_in_metadata => 1,
-            materials => [ "Book", "BookChapter" ]
-        },
         DOI => {
             type      => "string",
             label_msg => "doi_label",
@@ -1457,6 +1441,16 @@ sub fieldmap {
             position  => 1,
             include_in_metadata => 1,
             materials => [ "Article", "Book", "BookChapter" ],
+            required  => {
+                "Article" => {
+                    group   => "ARTICLE_JOURNAL_TITLE_PAGES",
+                    invalid_msg => "invalid_required_article_journal_title_pages"
+                },
+                "BookChapter" => {
+                    group   => "CHAPTER_JOURNL_TITLE_PAGES",
+                    invalid_msg => "invalid_required_chapter_journal_title_pages"
+                }
+            }
         },
         PatronJournalYear => {
             type      => "string",
@@ -1468,6 +1462,10 @@ sub fieldmap {
             include_in_metadata => 1,
             required  => {
                 "Article" => {
+                    group   => "ARTICLE_YEAR_VOL",
+                    invalid_msg => "invalid_required_year_vol"
+                },
+                "BookChapter" => {
                     group   => "ARTICLE_YEAR_VOL",
                     invalid_msg => "invalid_required_year_vol"
                 }
@@ -1588,6 +1586,37 @@ sub _check_requestability {
         note => $note
     };
 };
+
+my %vn_translations = (
+    sv_SE => {
+        'Holdings Check Only ' => 'Endast beståndskontroll ',
+        'Request Insert Successful ' => 'Beställningen lyckades ',
+        'Unable to find matching book ' => 'Kunde inte hitta bok ',
+        'Unable to find matching Journal ' => 'Kunde inte hitta tidskrift ',
+        'Update successful' => 'Ändringen lyckades'
+    }
+    );
+
+sub _translate_verification_note {
+    my $lang = shift;
+    my $note = shift;
+
+    if (exists $vn_translations{$lang}) {
+        if (exists $vn_translations{$lang}->{$note}) {
+            return $vn_translations{$lang}->{$note};
+        }
+    }
+    return $note;
+}
+
+sub _handle_verification_note {
+    my $response = shift;
+    my $lang = C4::Languages::getlanguage();
+
+    my @vns = split '\n\r?+', $response->{VerificationNote};
+
+    return join ', ', (map { _translate_verification_note($_) } @vns);
+}
 
 
 =head3 _validate_borrower

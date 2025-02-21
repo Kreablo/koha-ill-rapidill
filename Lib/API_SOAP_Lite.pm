@@ -34,6 +34,8 @@ sub call {
         if (!defined $type) {
             if ($name eq "ClientAppName" || $name eq "PatronNotes") {
                 $type = "string";
+            } elsif ($name eq "UpdateAction") {
+                $type = "rapid5api:ApiRequestUpdateAction";
             } elsif (exists $self->{credentials}->{$name}) {
                 $type = "string";
             } else {

@@ -12,6 +12,8 @@
 [% END %]
 [% SET illrequest_id = request.illrequest_id %]
 [% SET requests_back_url = "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=$illrequest_id" %]
+[% SET action_url = '/cgi-bin/koha/ill/ill-requests.pl' %]
+[% SET cud_op = 'cud-edititem' %]
 
 <h2>[% MSG.edit_request %]</h2>
 [% PROCESS "${cwd}/shared-includes/form.inc" %]

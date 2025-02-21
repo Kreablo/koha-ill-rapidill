@@ -4,6 +4,10 @@
 [% PROCESS "${cwd}/shared-includes/form.inc" %]
 [% SET staff = 0 %]
 [% SET requests_back_url = '/cgi-bin/koha/opac-illrequests.pl' %]
+[% SET action_url = '/cgi-bin/koha/opac-illrequests.pl' %]
+[% SET cud_op = 'cud-create' %]
+
+
 [% TRY %]
     [% lang_file = "${whole.cwd}/l10n/${whole.lang_dialect}"_".inc" %]
     [% PROCESS "$lang_file" %]
