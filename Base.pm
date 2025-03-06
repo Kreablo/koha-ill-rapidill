@@ -27,6 +27,8 @@ use File::Basename qw( dirname );
 use C4::Installer;
 
 use Koha::Illbackends::RapidILL::Lib::API;
+use Koha::Illbackends::RapidILL::Processor::SendArticleLink;
+use Koha::Illrequest::SupplierUpdate;
 use Koha::Libraries;
 use Koha::Patrons;
 use Koha::Logger;
@@ -56,6 +58,10 @@ sub new {
         'RAPIDILL_REQUEST_FAILED'    => dirname(__FILE__) . '/intra-includes/log/rapidill_request_failed.tt',
         'RAPIDILL_REQUEST_SUCCEEDED' => dirname(__FILE__) . '/intra-includes/log/rapidill_request_succeeded.tt'
     };
+
+    $self->{processors} = [
+        Koha::Illbackends::RapidILL::Processor::SendArticleLink->new
+    ];
 
     bless($self, $class);
 
@@ -287,9 +293,7 @@ sub cancel {
 
     # If the cancellation was successful, note that in Staff notes
     if ($result->{IsSuccessful}) {
-        $params->{request}->notesstaff(
-            join("\n\n", ($params->{request}->notesstaff || "", "Cancelled with RapidILL"))
-        )->store;
+        $params->{request}->append_to_note("Cancelled with RapidILL");
         return {
             cwd    => dirname(__FILE__),
             method => "cancel",
@@ -299,9 +303,7 @@ sub cancel {
     }
     # The call to RapidILL failed for some reason. Add the message we got back from the API
     # to the submission's Staff Notes
-    $params->{request}->notesstaff(
-        join("\n\n", ($params->{request}->notesstaff || "", "RapidILL request cancellation failed:\n" . $result->{VerificationNote} || ""))
-    )->store;
+    $params->{request}->append_to_note("RapidILL request cancellation failed:\n" . $result->{VerificationNote});
     # Return the message
     return {
         cwd     => dirname(__FILE__),
@@ -852,6 +854,14 @@ sub create_request {
         $metadata
     );
 
+    # We may need to remove fields prior to sending the request
+    my $fields = fieldmap();
+    foreach my $field(keys %{$fields}) {
+        if ($fields->{$field}->{no_submit}) {
+            delete $metadata->{$field};
+        }
+    }
+
     # Make the request with RapidILL via the koha-plugin-rapidill API
     my $result = $self->{_api}->InsertRequest( $metadata, $submission->borrowernumber );
     my $error = 0;
@@ -887,9 +897,7 @@ sub create_request {
 
     # The call to RapidILL failed for some reason. Add the message we got back from the API
     # to the submission's Staff Notes
-    $submission->notesstaff(
-        join("\n\n", ($submission->notesstaff || "", "RapidILL request failed:\n" . $error))
-    )->store;
+    $submission->append_to_note("RapidILL request failed:\n" . $error);
 
     # Log the outcome
     $self->log_request_outcome({
@@ -1036,6 +1044,70 @@ sub metadata0 {
 }
 
 
+=head3 attach_processors
+
+Receive a Koha::Illrequest::SupplierUpdate and attach
+any processors we have for it
+
+=cut
+
+sub attach_processors {
+    my ( $self, $update ) = @_;
+
+    foreach my $processor(@{$self->{processors}}) {
+        if (
+            $processor->{target_source_type} eq $update->{source_type} &&
+            $processor->{target_source_name} eq $update->{source_name}
+        ) {
+            $update->attach_processor($processor);
+        }
+    }
+}
+
+=head3 get_supplier_update
+
+Called as a backend capability, receives a local request object
+and gets the latest update from RapidILL using their
+RetrieveRequestInfo request
+Return Koha::Illrequest::SupplierUpdate representing the update
+
+=cut
+
+sub get_supplier_update {
+    my ( $self, $params ) = @_;
+
+    my $request = $params->{request};
+    my $delay = $params->{delay};
+
+    # Find the submission's Rapid ID
+    my $rapid_request_id = $request->illrequestattributes->find({
+        illrequest_id => $request->illrequest_id,
+        type          => "RapidRequestId"
+    });
+
+    if (!$rapid_request_id) {
+        # No Rapid request, we can't do anything
+        print "Request " . $request->illrequest_id . " does not contain a RapidRequestId\n";
+        return;
+    }
+
+    if ($delay) {
+        sleep($delay);
+    }
+
+    my $response = $self->{_api}->RetrieveRequestInfo(
+        $rapid_request_id->value
+    );
+
+    if ($response->is_success && $body->{result}->{IsSuccessful}) {
+        return Koha::Illrequest::SupplierUpdate->new(
+            'backend',
+            $self->name,
+            $response,
+            $request
+        );
+    }
+}
 
 =head3 capabilities
 
@@ -1061,9 +1133,9 @@ sub capabilities {
         # i.e. the create form has been submitted
         can_create_request => sub { _can_create_request(@_) },
 
-        # This is required for compatibility
-        # with Koha versions prior to bug 33716
-        should_display_availability => sub { _can_create_request(@_) }
+        # Return whether we are ready to display availability
+        should_display_availability => sub { _can_create_request(@_) },
+        get_supplier_update => sub { $self->get_supplier_update(@_) }
     };
     return $capabilities->{$name};
 }
@@ -1186,6 +1258,7 @@ sub _openurl_to_ill {
     my ($params) = @_;
 
     my $transform_metadata = {
+        sid     => 'Sid',
         genre   => 'RapidRequestType',
         content => 'RapidRequestType',
         format  => 'RapidRequestType',
@@ -1276,6 +1349,8 @@ sub fieldmap_sorted {
 All fields expected by the API
 
 Key = API metadata element name
+  hide = Make the field hidden in the form
+  no_submit = Do not pass to RapidILL API
   exclude = Do not include on the entry form
   type = Does an element contain a string value or an array of string values?
   label = Display label
@@ -1327,6 +1402,14 @@ sub fieldmap {
                     invalid_msg => "an_article_identifier_required"
                 }
             }
+        },
+        Sid => {
+            hide      => 1,
+            no_submit => 1,
+            type      => "string",
+            label     => "Source identifier",
+            position  => 14,
+            materials => [ "Article", "Book", "BookChapter" ],
         },
         SuggestedIsbns => {
             type      => "array",
