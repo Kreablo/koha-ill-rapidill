@@ -130,16 +130,15 @@ Make a call to the retrieverequestinfo API endpoint
 sub RetrieveRequestInfo {
     my ($self, $request_id) = @_;
 
-    my $body = encode_json({
-        requestId => $request_id
-    });
+    my $body = {
+        RequestId => $request_id
+    };
 
-    my $request = HTTP::Request->new( 'POST', $self->{baseurl} . "/retrieverequestinfo" );
+    if ($self->_is_debug) {
+        $self->_debug("RetrieveRequestInfo: " . $request_id);
+    }
 
-    $request->header( "Content-type" => "application/json" );
-    $request->content( $body );
-
-    return $self->{ua}->request( $request );
+    return _instance()->call( 'RetrieveRequestInfo', $body );
 }
 
 sub _get_credentials {

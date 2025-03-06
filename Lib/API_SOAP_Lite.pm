@@ -36,6 +36,8 @@ sub call {
                 $type = "string";
             } elsif ($name eq "UpdateAction") {
                 $type = "rapid5api:ApiRequestUpdateAction";
+            } elsif ($name eq "RequestId") {
+                $type = "int";
             } elsif (exists $self->{credentials}->{$name}) {
                 $type = "string";
             } else {
@@ -47,6 +49,7 @@ sub call {
             $value = \@a;
             $type = "rapid5api:ArrayOfString";
         }
+        print STDERR "Setting '$name' to type '$type'";
         push @params, SOAP::Data->name('rapid5api:' . $name)->value($value)->type($type);
     }
     $soap->ns('http://rapid2.library.colostate.edu/rapid5api/', 'rapid5api');
@@ -56,6 +59,8 @@ sub call {
         $input = $input->type('rapid5api:InsertRequestInput_Api5');
     } elsif ($operation eq 'UpdateRequest') {
         $input = $input->type('rapid5api:UpdateRequestInput_Api5');
+    } elsif ($operation eq 'RetrieveRequestInfo') {
+        $input = $input->type('rapid5api:RetrieveInfoInput_Api5');
     }
     my $resp = $soap->call('rapid5api:' . $operation, $input);
 

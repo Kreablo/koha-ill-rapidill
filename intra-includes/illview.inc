@@ -1,81 +1,51 @@
-[% BLOCK backend_jsinclude %]
-<style>
-    #rapid_status {
-        padding-top: 20px;
-        display: none;
-    }
-    .rapid_transaction {
-        display: flex;
-    }
-    .rapid_transaction > * {
-        width: 25%;
-    }
-    #transactions_header {
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    #rapid_header {
-        margin-bottom: 1rem;
-    }
-</style>
-<script>
-    document.addEventListener('DOMContentLoaded', function(){
-        var field_map = [% whole.field_map_json %];
-
-        var rapidIdContainer = $(".requestmeta-RapidILL_identifier");
-        if (!rapidIdContainer) return;
-
-        // We clone so we can extract the RapidID without affecting the displayed markup
-        var containerClone = rapidIdContainer.clone();
-
-        $('.page-section').first().append('<div id="rapid_status" class="rows"></div>');
-
-        containerClone.find('span.label').remove();
-        var rapidId = containerClone.text().replace(/ |\n/g,'');
-
-        if (!rapidId || rapidId.length === 0) return;
-
-        $.post({
-            url: '/api/v1/contrib/rapidill/retrievehistory',
-            data: JSON.stringify({ requestId: rapidId }),
-            contentType: 'application/json'
-        })
-            .done(function(resp, status) {
-                var body = resp.result;
-                if (
-                    !body ||
-                    !body.IsSuccessful ||
-                    !body.HistoryTransactions ||
-                    !body.HistoryTransactions.TranHistory ||
-                    body.HistoryTransactions.TranHistory.length === 0
-                ) return;
-
-                var transactionsHeader = '<div id="transactions_header" class="rapid_transaction">' +
-                    '<div class="date">' + _('Date') + '</div>' +
-                    '<div class="branch">' + _('Branch name') + '</div>' +
-                    '<div class="code">' + _('RapidILL code') + '</div>' +
-                    '<div class="state">' + _('RapidILL state') + '</div>' +
-                    '</div>';
-
-                var transactions = [];
-                body.HistoryTransactions.TranHistory.forEach(function(tran) {
-                    var tranDate = new Date(tran.TransactionDate);
-                    var tranMarkup = '<div class="rapid_transaction">' +
-                        '<div class="date">' + tranDate.toLocaleDateString() + ' ' + tranDate.toLocaleTimeString() + '</div>' +
-                        '<div class="branch">' + tran.BranchName + '</div>' +
-                        '<div class="code">' + tran.RapidCode + '</div>' +
-                        '<div class="state">' + tran.StateType + '</div>' +
-                        '</div>';
-                    transactions.push(tranMarkup);
-                });
-
-                $('#rapid_status').append(
-                    '<h1 id="rapid_header">' + _('RapidILL history') + '</h1>' +
-                    transactionsHeader + 
-                    transactions.join('')
-                ).show();
-            });
-
-    });
-</script>
+[% cwd = whole.cwd %]
+[% TRY %]
+    [% lang_file = "${cwd}/l10n/${whole.lang_dialect}"_".inc" %]
+    [% PROCESS "$lang_file" %]
+[% CATCH %]
+    [% TRY %]
+        [% lang_file = "${cwd}/l10n/${whole.lang_all}"_".inc" %]
+        [% PROCESS "$lang_file" %]
+    [% CATCH %]
+        [% PROCESS "${cwd}/l10n/default.inc" %]
+    [% END %]
 [% END %]
+[% SET illrequest_id = request.illrequest_id %]
+<style>
+  #rapidill-history {
+     display: block;
+  }
+</style>
+  [% IF whole.request_info && whole.request_info.HistoryTransactions %]
+    [% SET transaction_history = whole.request_info.HistoryTransactions.TranHistory %]
+    [% IF transaction_history && transaction_history.size > 0 %]
+      <div id="rapidill-history">
+      <h4>[% MSG.request_history_heading %]</h4>
+      [% FOREACH trans IN transaction_history %]
+         <p><span class="date">[% trans.TransactionDate %]</span> : <strong>[% MSG.request_history_line | html %]</strong> "[% trans.StateType | html %]"</p>
+      [% END %]
+      </div>
+    [% END %]
+  [% END %]
+<script>
+  addEventListener("DOMContentLoaded", (event) => {
+    try {
+      const h = document.getElementById('rapidill-history');
+      const rlog = document.getElementById('requestLog');
+      const b = rlog.getElementsByClassName('modal-body');
+      if (b.length > 0 && h) {
+        h.remove();
+        b[0].append(h);
+      }
+      const ds = rlog.getElementsByClassName('date');
+      for (let i = 0; i < ds.length; i++) {
+         try {
+            const dt = new Date(ds[i].textContent);
+            ds[i].textContent = dt.toLocaleDateString() + ' ' + dt.toLocaleTimeString();
+         } catch (de) {
+         }
+      }
+    } catch (e) {
+    }
+  });
+</script>

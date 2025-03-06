@@ -28,7 +28,7 @@ use C4::Installer;
 
 use Koha::Illbackends::RapidILL::Lib::API;
 use Koha::Illbackends::RapidILL::Processor::SendArticleLink;
-use Koha::Illrequest::SupplierUpdate;
+use Koha::ILL::Request::SupplierUpdate;
 use Koha::Libraries;
 use Koha::Patrons;
 use Koha::Logger;
@@ -321,10 +321,29 @@ sub cancel {
 =cut
 
 sub illview {
-    my ($self, $params) = @_;
+    my ($params) = @_;
+
+    my $lang = C4::Languages::getlanguage();
+    my @lang_split = split /_|-/, $lang;
+
+    my $request = $params->{request};
+    my $rapid_request_id = $params->{request}->extended_attributes->find({
+        illrequest_id => $params->{request}->illrequest_id,
+        type          => "RapidRequestId"
+    });
+
+    my $request_info;
+
+    if (defined $rapid_request_id) {
+        my $api = Koha::Illbackends::RapidILL::Lib::API->new($VERSION, {});
+        $request_info = $api->RetrieveRequestInfo($rapid_request_id->value);
+    }
 
     return {
-        field_map_json => to_json(fieldmap()),
+        cwd    => dirname(__FILE__),
+        lang_dialect   => $lang,
+        lang_all       => $lang_split[0],
+        request_info   => $request_info,
         method         => "illview"
     };
 }
@@ -1080,7 +1099,7 @@ sub get_supplier_update {
     my $delay = $params->{delay};
 
     # Find the submission's Rapid ID
-    my $rapid_request_id = $request->illrequestattributes->find({
+    my $rapid_request_id = $request->extended_attributes->find({
         illrequest_id => $request->illrequest_id,
         type          => "RapidRequestId"
     });
@@ -1095,15 +1114,15 @@ sub get_supplier_update {
         sleep($delay);
     }
 
-    my $response = $self->{_api}->RetrieveRequestInfo(
+    my $result = $self->{_api}->RetrieveRequestInfo(
         $rapid_request_id->value
     );
 
-    if ($response->is_success && $body->{result}->{IsSuccessful}) {
-        return Koha::Illrequest::SupplierUpdate->new(
+    if ($result->{IsSuccessful}) {
+        return Koha::ILL::Request::SupplierUpdate->new(
             'backend',
             $self->name,
-            $response,
+            $result,
             $request
         );
     }
