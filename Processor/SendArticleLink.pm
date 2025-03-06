@@ -28,9 +28,10 @@ sub run {
     # Get the elements we need
     my $address = $update_body->{ArticleExchangeAddress};
     my $password = $update_body->{ArticleExchangePassword};
+    my $have_exchange_link = $address && length $address > 0 && $password && length $password > 0;
 
     # If we've not got what we need, record that fact and bail
-    if (!$address || length $address == 0 || !$password || length $password == 0) {
+    if (!$have_exchange_link) {
         push @{$status->{error}}, "Unable to access article address and/or password";
         return $status;
     }
@@ -45,7 +46,7 @@ END_MESSAGE
     if (!$options->{dry_run}) {
         $self->debug_msg('Sending patron notice');
         $ret = $request->send_patron_notice(
-            'ILL_REQUEST_UPDATE',
+            'ILL_PICKUP_READY',
             $update_text
         );
     } else {
