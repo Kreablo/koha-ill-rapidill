@@ -46,7 +46,7 @@ END_MESSAGE
     if (!$options->{dry_run}) {
         $self->debug_msg('Sending patron notice');
         $ret = $request->send_patron_notice(
-            'ILL_PICKUP_READY',
+            'ILL_REQUEST_UPDATE',
             $update_text
         );
     } else {
