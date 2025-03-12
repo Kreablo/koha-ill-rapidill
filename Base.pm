@@ -1425,6 +1425,7 @@ sub fieldmap {
         Sid => {
             hide      => 1,
             no_submit => 1,
+            exclude   => 1,
             type      => "string",
             label     => "Source identifier",
             position  => 14,
