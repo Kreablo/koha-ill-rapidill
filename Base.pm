@@ -168,6 +168,8 @@ sub create {
     elsif ( $stage eq 'validate' || $stage eq 'form' ) {
 
         my $group_validity = $self->_validate_metadata($other);
+        my $article_without_issn = $other->{RapidRequestType} eq 'Article' && !($other->{'SuggestedIssns'} =~ /[0-9]{4}-[0-9]{3}[0-9X]/);
+        $params->{article_without_issn} = $article_without_issn;
         my $all_valid = (grep {!$_} (values %$group_validity)) == 0 ;
 
         if ($self->_is_debug) {
@@ -222,7 +224,7 @@ sub create {
             }
         }
         else {
-            if (C4::Context->preference('ILLCheckAvailability')) {
+            if (!$article_without_issn && C4::Context->preference('ILLCheckAvailability')) {
                 my $requestability = $self->_check_requestability($params->{other});
                 if ($self->_is_debug) {
                     $self->_debug("requestability: " . Dumper($requestability));
@@ -845,7 +847,7 @@ sub submit_and_request {
     # First we create a submission
     my $submission = $self->create_submission($params);
 
-    if (C4::Context->preference('ILLModuleUnmediated')) {
+    if (!$params->{article_without_issn} && C4::Context->preference('ILLModuleUnmediated')) {
     # Now use the submission to try and create a request with Rapid
         return $self->confirm({ request => $submission });
     } else {
@@ -1414,13 +1416,13 @@ sub fieldmap {
             help_msg  => "issn_help",
             materials => [ "Article" ],
             include_in_metadata => 1,
-            required  => {
-                "Article" => {
-                    group   => "ARTICLE_IDENTIFIER",
-                    valid_msg => "ok",
-                    invalid_msg => "an_article_identifier_required"
-                }
-            }
+#            required  => {
+#                "Article" => {
+#                    group   => "ARTICLE_IDENTIFIER",
+#                    valid_msg => "ok",
+#                    invalid_msg => "an_article_identifier_required"
+#                }
+#            }
         },
         Sid => {
             hide      => 1,
