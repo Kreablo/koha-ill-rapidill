@@ -1,6 +1,7 @@
 package Koha::Illbackends::RapidILL::Lib::API_SOAP_Lite;
 
-use SOAP::Lite +trace => 'all';
+#use SOAP::Lite +trace => 'all';
+use SOAP::Lite;
 use Data::Dumper;
 
 sub new {
