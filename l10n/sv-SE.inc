@@ -25,8 +25,8 @@
     issn_help = "Om flera ISSN, ange med blanksteg mellan",
     item_available = "Materialet kan fjärrlånas.",
     item_cannot_be_requested = "Materialet kan inte fjärrlånas",
-    item_locally_available = "Materialet finns lokalt",
-    item_not_requestable = "Materialet kan ej fjärrlånas",
+    item_locally_available = "Sök på titeln eller leta upp numret/kapitlet",
+    item_not_requestable = "Artikeln/kapitlet finns via länken nedan",
     journal_issue_number = "Tidskriftsnummer",
     journal_month = "Månad",
     journal_title = "Tidskrift",
@@ -62,5 +62,6 @@
     a_book_identifier_required = "Ett standardnummer för att identifiera bok måste anges",
     invalid_required_article_article_title_pages = "Antingen artikeltitel eller sidnummer måste anges",
     invalid_required_chapter_article_title_pages = "Antingen kapitlets titel eller sidnummer måste anges",
-    invalid_required_year_vol = "Antingen årtal eller volym måste anges"
+    invalid_required_year_vol = "Antingen årtal eller volym måste anges",
+    unhandled_error = "Det uppstod ett fel"
 } %]

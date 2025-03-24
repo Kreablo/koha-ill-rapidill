@@ -25,8 +25,8 @@
     issn_help = "Multiple ISSNs must be separated by a space",
     item_available = "Item is available for request",
     item_cannot_be_requested = "Item cannot be requested",
-    item_locally_available = "Item is locally available",
-    item_not_requestable = "Item not requestable",
+    item_locally_available = "Search for the title or go to the issue/chapter",
+    item_not_requestable = "The article/chapter is available with the link below",
     journal_issue_number = "Issue number",
     journal_month = "Journal month",
     journal_title = "Journal",
@@ -62,5 +62,6 @@
     a_book_identifier_required = "A book identifier is required",
     invalid_required_article_article_title_pages = "Either article title or pages must be specified",
     invalid_required_chapter_article_title_pages = "Either chapter title or pages must be specified",
-    invalid_required_year_vol = "Either year or volume must be specified"
+    invalid_required_year_vol = "Either year or volume must be specified",
+    unhandled_error = "There was an error"
 } %]

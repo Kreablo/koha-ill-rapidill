@@ -36,9 +36,8 @@
   [% ELSIF whole.message %]
     <p><em>[% whole.message | html %]</em></p>
   [% ELSE %]
-    <p><em>Unhandled error</em></p>
+    <p><em>[% MSG.unhandled_error %]</em></p>
   [% END %]
-  <p><i class="fa-icon fa-circle-info fa-solid fa-lg"></i> [% MSG.request_failure_alternative %]</p>
 [% END %]
 
 [% IF whole.stage == "commit" %]

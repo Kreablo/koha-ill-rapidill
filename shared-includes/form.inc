@@ -103,15 +103,15 @@
     <input name="op" value="[% cud_op %]" type="hidden"/>
     <input name="RapidRequestType" value="[% rapid_request_type %]" type="hidden" />
     <input name="backend" value="RapidILL" type="hidden"/>
+    <div id="[% rapid_request_type %]_messages">
+    [% PROCESS render_errors errors=errors %]
+    </div>
     [% IF Koha.Version.major >= 24 %][% INCLUDE 'csrf-token.inc' %][% END %]
     <ul class="fields">
       [% FOREACH field IN whole.field_map %]
         [% PROCESS render_field field=field rapid_request_type=rapid_request_type field_errors=field_errors %]
       [% END %]
     </ul>
-    <div id="[% rapid_request_type %]_messages">
-    [% PROCESS render_errors errors=errors %]
-    </div>
   </fieldset>
  [% IF variant != 'edit' && staff %]
   <fieldset class="form-group">
