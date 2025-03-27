@@ -110,21 +110,35 @@ const doSubmit = (event, form, formId, type) => {
 };
 
 const initForm = (form, formId, type) => {
-    const id = '#' + formId + ' #cardnumber';
-    if (typeof patron_autocomplete === "function") {
-        patron_autocomplete(
-            $(id),
-            {
-                'on-select-callback': function( event, ui ) {
-                    $(id).val( ui.item.cardnumber );
-                    return false;
-                }
+  if (typeof patron_autocomplete === "function") {
+    patron_autocomplete(
+      $('#' + formId + ' #cardnumber'),
+      {
+        'on-select-callback': function( event, ui ) {
+          const form = document.getElementById(formId);
+          let cardnumberInput;
+          let borrowernumberInput;
+          for (input of form.getElementsByTagName('input')) {
+            if (input.getAttribute('name') === 'cardnumber') {
+              cardnumberInput = input;
             }
+            if (input.getAttribute('name') === 'rapidill-borrowernumber') {
+              borrowernumberInput = input;
+            }
+          }
+          if (cardnumberInput) {
+            cardnumberInput.value = ui.item.firstname + ' ' + ui.item.surname + (ui.item.userid ? ' (' + ui.item.userid + ')' : '') + (ui.item.cardnumber ? ' (' + ui.item.cardnumber + ')' : '');
+          }
+          if (borrowernumberInput) {
+            borrowernumberInput.value = ui.item.patron_id;
+          }
 
-
-        );
-    }
-    form.addEventListener('submit', (event) => doSubmit(event, form, formId, type));
+          return false;
+        }
+      }
+    );
+  }
+  form.addEventListener('submit', (event) => doSubmit(event, form, formId, type));
 };
 
 for (const type of ['Book', 'Article', 'BookChapter']) {

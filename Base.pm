@@ -118,7 +118,7 @@ sub create {
         # 'cardnumber' here could also be a surname (or in the case of
         # search it will be a borrowernumber).
         my ( $brw_count, $brw ) =
-          _validate_borrower( $other->{'cardnumber'}, $stage );
+          _validate_borrower( $other->{'rapidill-borrowernumber'}, $stage );
 
         if ( $brw_count == 0 ) {
             $response->{status} = "invalid_borrower";
@@ -1734,27 +1734,38 @@ sub _validate_borrower {
     # Return ( 0, undef ), ( 1, $brw ) or ( n, $brws )
     my ( $input, $action ) = @_;
 
-    return ( 0, undef ) if !$input || length $input == 0;
+    my $opac = C4::Context->interface eq 'opac';
+
+    if ($opac) {
+        $input = C4::Context->userenv->{number};
+    } else {
+        return ( 0, undef ) if !$input || length $input == 0;
+    }
 
     my $patrons = Koha::Patrons->new;
-    my ( $count, $brw );
-    my $query = { cardnumber => $input };
-    $query = { borrowernumber => $input } if ( $action && $action eq 'search_results' );
+    my $count = 0;
+    my $brw = undef;
+    my $query = { borrowernumber => $input };
 
     my $brws = $patrons->search($query);
     $count = $brws->count;
-    my @criteria = qw/ surname userid firstname end /;
-    while ( $count == 0 ) {
-        my $criterium = shift @criteria;
-        return ( 0, undef ) if ( "end" eq $criterium );
+    if ( $count == 1 ) {
+        return ( 1, $brws->next );
+    }
+    if ( $opac ) {
+        return ( 0, undef );
+    }
+
+    for my $criterium (qw/ surname userid cardnumber firstname end /) {
         $brws = $patrons->search( { $criterium => $input } );
         $count = $brws->count;
+        last if ( $count != 0 );
     }
     if ( $count == 1 ) {
         $brw = $brws->next;
     }
     else {
-        $brw = $brws;    # found multiple results
+        $brw = $brws;
     }
     return ( $count, $brw );
 }

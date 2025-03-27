@@ -121,6 +121,7 @@
         <label for="cardnumber">[% MSG.cardnumber_username_or_surname | html %]</label>
         <input class="form-control" type="text" required="required" autocomplete="off" name="cardnumber" id="cardnumber" type="text"
            value="[% whole.value.other.cardnumber %]" />
+        <input type="hidden" name="rapidill-borrowernumber" />
       </li>
     </ul>
   </fieldset>
