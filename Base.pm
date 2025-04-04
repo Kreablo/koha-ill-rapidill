@@ -118,7 +118,7 @@ sub create {
         # 'cardnumber' here could also be a surname (or in the case of
         # search it will be a borrowernumber).
         my ( $brw_count, $brw ) =
-          _validate_borrower( $other->{'rapidill-borrowernumber'}, $stage );
+            $self->_validate_borrower( $other->{'rapidill-borrowernumber'}, $stage );
 
         if ( $brw_count == 0 ) {
             $response->{status} = "invalid_borrower";
@@ -1732,12 +1732,15 @@ sub _validate_borrower {
 
     # Perform cardnumber search.  If no results, perform surname search.
     # Return ( 0, undef ), ( 1, $brw ) or ( n, $brws )
-    my ( $input, $action ) = @_;
+    my ( $self, $input, $action ) = @_;
 
     my $opac = C4::Context->interface eq 'opac';
 
     if ($opac) {
         $input = C4::Context->userenv->{number};
+        if ( $self->_is_debug ) {
+            $self->_debug("In opac, using borrowernumber '$input' from userenv.");
+        }
     } else {
         return ( 0, undef ) if !$input || length $input == 0;
     }
