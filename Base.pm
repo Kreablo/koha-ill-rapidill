@@ -108,15 +108,14 @@ sub create {
         rapidill_config => $self->{_config},
     };
 
-    # Check for borrowernumber, but only if we're not receiving an OpenURL
-    if (
-        !$other->{openurl} &&
-        (!$other->{borrowernumber} && defined( $other->{cardnumber} ))
-    ) {
-        $response->{cardnumber} = $other->{cardnumber};
+    if ( C4::Context->interface eq 'opac' ) {
+        $other->{borrowernumber} = C4::Context->userenv->{number};
+    }
 
-        # 'cardnumber' here could also be a surname (or in the case of
-        # search it will be a borrowernumber).
+    # Check for borrowernumber, but only if we're not receiving an OpenURL
+    if ( !$other->{borrowernumber} && $other->{'rapidill-borrowernumber'}) {
+        $response->{'rapidill-borrowernumber'} = $other->{'rapidill-borrowernumber'};
+
         my ( $brw_count, $brw ) =
             $self->_validate_borrower( $other->{'rapidill-borrowernumber'}, $stage );
 
@@ -135,10 +134,8 @@ sub create {
             $response->{error} = 0;
             return $response;
         }
-        else {
-            $other->{borrowernumber} = $brw->borrowernumber;
-        }
 
+        $other->{borrowernumber} = $brw->borrowernumber;
         $self->{borrower} = $brw;
     }
 
@@ -716,7 +713,7 @@ Create a local submission, for later RapidILL request creation
 sub create_submission {
     my ($self, $params) = @_;
 
-    my $patron = Koha::Patrons->find( $params->{other}->{borrowernumber} );
+    my $patron = exists($self->{borrower}) ? $self->{borrower} : Koha::Patrons->find( $params->{other}->{borrowernumber} );
 
     my $request = $params->{request};
     $request->borrowernumber($patron->borrowernumber);
@@ -1734,16 +1731,7 @@ sub _validate_borrower {
     # Return ( 0, undef ), ( 1, $brw ) or ( n, $brws )
     my ( $self, $input, $action ) = @_;
 
-    my $opac = C4::Context->interface eq 'opac';
-
-    if ($opac) {
-        $input = C4::Context->userenv->{number};
-        if ( $self->_is_debug ) {
-            $self->_debug("In opac, using borrowernumber '$input' from userenv.");
-        }
-    } else {
-        return ( 0, undef ) if !$input || length $input == 0;
-    }
+    return ( 0, undef ) if !$input || length $input == 0;
 
     my $patrons = Koha::Patrons->new;
     my $count = 0;
@@ -1754,9 +1742,6 @@ sub _validate_borrower {
     $count = $brws->count;
     if ( $count == 1 ) {
         return ( 1, $brws->next );
-    }
-    if ( $opac ) {
-        return ( 0, undef );
     }
 
     for my $criterium (qw/ surname userid cardnumber firstname end /) {
