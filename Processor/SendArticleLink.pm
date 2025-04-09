@@ -2,6 +2,7 @@ package Koha::Illbackends::RapidILL::Processor::SendArticleLink;
 
 use Modern::Perl;
 use POSIX;
+use HTML::Escape qw/escape_html/;
 
 use parent qw(Koha::ILL::Request::SupplierUpdateProcessor);
 
@@ -36,9 +37,16 @@ sub run {
         return $status;
     }
 
+    $address = escape_html($address);
+    $password = escape_html($password);
+
     my $update_text = <<"END_MESSAGE";
-    $address
-    $password
+    <ul style="list-style-type: none">
+      <li>
+        <a href="$address">$address</a>
+      </li>
+      <li>$password</li>
+    </ul>
 END_MESSAGE
 
     # Try to send the notice if appropriate
