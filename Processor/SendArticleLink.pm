@@ -45,7 +45,7 @@ sub run {
       <li>
         <a href="$address">$address</a>
       </li>
-      <li>$password</li>
+      <li><strong>Password:</strong> $password</li>
     </ul>
 END_MESSAGE
 
