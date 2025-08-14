@@ -53,7 +53,7 @@
 [% SET active = whole.value.other.RapidRequestType ? whole.value.other.RapidRequestType : whole.rapidill_config.enabled_types.0 %]
 <ul class="nav nav-tabs" role="tablist" />
    [% IF whole.rapidill_config.enabled_types.grep('^Book$').size() > 0 %]
-   <li role="presentation" class="nav-item"><a class="nav-link[% IF active == "Book" %] active[% END %]" href="#type-book" aria-controls="type-book" role="tab" data-bs-toggle="tab">[% MSG.option_book %]</a></li>
+   <li role="presentation" class="nav-item"><a class="nav-link[% IF active == "Book" || active == "" %] active[% END %]" href="#type-book" aria-controls="type-book" role="tab" data-bs-toggle="tab">[% MSG.option_book %]</a></li>
    [% END %]
    [% IF whole.rapidill_config.enabled_types.grep('^Article$').size() > 0 %]
    <li role="presentation" class="nav-item"><a class="nav-link[% IF active == "Article" %] active[% END %]" href="#type-article" aria-controls="type-article" role="tab" data-bs-toggle="tab">[% MSG.option_article %]</a></li>

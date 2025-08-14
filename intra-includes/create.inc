@@ -32,13 +32,13 @@
 [% SET active = whole.value.other.RapidRequestType ? whole.value.other.RapidRequestType : whole.rapidill_config.enabled_types.0 %]
 <ul class="nav nav-tabs" role="tablist" />
    [% IF whole.rapidill_config.enabled_types.grep('^Book$').size() > 0 %]
-   <li role="presentation" class="nav-item[% IF active == "Book" %] active[% END %]"><a href="#type-book" aria-controls="type-book" role="tab" data-bs-toggle="tab" class="nav-link">[% MSG.option_book | html %]</a></li>
+   <li role="presentation" class="nav-item"><a href="#type-book" aria-controls="type-book" role="tab" data-bs-toggle="tab" class="nav-link[% IF active == "Book" %] active[% END %]">[% MSG.option_book | html %]</a></li>
    [% END %]
    [% IF whole.rapidill_config.enabled_types.grep('^Article$').size() > 0 %]
-   <li role="presentation" class="nav-item[% IF active == "Article" %] active[% END %]"><a href="#type-article" aria-controls="type-article" role="tab" data-bs-toggle="tab" class="nav-link">[% MSG.option_article | html %]</a></li>
+   <li role="presentation" class="nav-item"><a href="#type-article" aria-controls="type-article" role="tab" data-bs-toggle="tab" class="nav-link[% IF active == "Article" %] active[% END %]">[% MSG.option_article | html %]</a></li>
    [% END %]
    [% IF whole.rapidill_config.enabled_types.grep('^BookChapter$').size() > 0 %]
-   <li role="presentation" class="nav-item[% IF active == "BookChapter" %] active[% END %]"><a href="#type-chapter" aria-controls="type-chapter" role="tab" data-bs-toggle="tab" class="nav-link">[% MSG.option_book_chapter | html %]</a></li>
+   <li role="presentation" class="nav-item"><a href="#type-chapter" aria-controls="type-chapter" role="tab" data-bs-toggle="tab" class="nav-link[% IF active == "BookChapter" %] active[% END %]">[% MSG.option_book_chapter | html %]</a></li>
    [% END %]
 </ul>
 <div class="tab-content">
